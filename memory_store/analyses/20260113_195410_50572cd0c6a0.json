@@ -1,0 +1,24 @@
+{
+  "headline": "Which countries do business with Iran  and what could US tariffs mean?",
+  "timestamp": "2026-01-13 19:54:10.646839",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.7,
+      "reasoning": "The headline explicitly mentions US tariffs, which directly impacts the US Dollar through trade policy and potential retaliatory measures. The US Dollar is also a primary currency in international trade, and any disruption to trade flows involving Iran could have ripple effects on its value."
+    },
+    {
+      "currency": "EUR",
+      "confidence": 0.55,
+      "reasoning": "European countries have significant trade relationships with Iran. US tariffs could disrupt these trade flows, potentially impacting the Euro through reduced trade volumes and increased uncertainty in the Eurozone's economic outlook."
+    },
+    {
+      "currency": "CNY",
+      "confidence": 0.5,
+      "reasoning": "China is a major trading partner with Iran. US tariffs could affect the bilateral trade relationship between China and Iran, potentially influencing the Chinese Yuan through trade volume adjustments and geopolitical considerations."
+    }
+  ],
+  "processing_time_ms": 1403.68,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

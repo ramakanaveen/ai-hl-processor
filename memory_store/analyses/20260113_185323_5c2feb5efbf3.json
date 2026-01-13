@@ -1,0 +1,14 @@
+{
+  "headline": "Federal Reserve announces rate cut",
+  "timestamp": "2026-01-13 18:53:23.418260",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.95,
+      "reasoning": "The Federal Reserve directly controls US monetary policy, and a rate cut directly impacts the US dollar's value."
+    }
+  ],
+  "processing_time_ms": 1493.05,
+  "model_used": "gemini-2.0-flash-exp",
+  "error": null
+}

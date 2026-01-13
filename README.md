@@ -439,4 +439,4 @@ For issues or questions:
 - [ ] API server with FastAPI
 - [ ] Web dashboard for monitoring
 - [ ] Custom entity definitions
-- [ ] Webhook notifications
+- [ ] Webhook notification support

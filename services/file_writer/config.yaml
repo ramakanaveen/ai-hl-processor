@@ -1,0 +1,15 @@
+websocket:
+  url: "ws://localhost:8766"
+  reconnect_interval_seconds: 5
+
+output:
+  format: "jsonl"  # jsonl or json
+  directory: "output/results"
+  file_pattern: "results_{date}.jsonl"
+
+  rotation:
+    enabled: true
+    max_size_mb: 100
+
+logging:
+  level: "INFO"

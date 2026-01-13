@@ -1,0 +1,14 @@
+{
+  "headline": "ECB announces emergency \u20ac750 billion bond buying program",
+  "timestamp": "2026-01-11 22:34:00.778819",
+  "impacted_entities": [
+    {
+      "currency": "EUR",
+      "confidence": 0.85,
+      "reasoning": "Mock: EU/ECB-related keywords detected"
+    }
+  ],
+  "processing_time_ms": 0.01,
+  "model_used": "gemini-flash-lite-latest",
+  "error": null
+}

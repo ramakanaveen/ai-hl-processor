@@ -1,0 +1,14 @@
+{
+  "headline": "UK announces new fiscal policy",
+  "timestamp": "2026-01-11 22:27:38.604555",
+  "impacted_entities": [
+    {
+      "currency": "GBP",
+      "confidence": 0.85,
+      "reasoning": "Mock: UK-related keywords detected"
+    }
+  ],
+  "processing_time_ms": 0.21,
+  "model_used": "gemini-flash-lite-latest",
+  "error": null
+}

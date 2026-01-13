@@ -1,0 +1,14 @@
+{
+  "headline": "Custody extended for owner of Swiss ski bar after deadly fire",
+  "timestamp": "2026-01-13 19:54:02.554028",
+  "impacted_entities": [
+    {
+      "currency": "CHF",
+      "confidence": 0.6,
+      "reasoning": "The headline mentions a 'Swiss ski bar', directly linking the event to Switzerland. While the event itself is localized and tragic, any significant disruption or investigation in Switzerland could lead to minor safe-haven flows into the Swiss Franc (CHF) if perceived as a broader risk, though the confidence is moderate due to the specific and limited nature of the event."
+    }
+  ],
+  "processing_time_ms": 981.89,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

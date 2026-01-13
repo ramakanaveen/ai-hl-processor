@@ -1,0 +1,24 @@
+{
+  "headline": "Russia is 'going backwards' in equipment and deploying post WWII-era tanks, according to Western officials",
+  "timestamp": "2026-01-13 19:55:10.195621",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.75,
+      "reasoning": "The news highlights potential Russian military weakness, which could influence geopolitical risk sentiment. Increased geopolitical uncertainty often leads to safe-haven flows into the USD."
+    },
+    {
+      "currency": "EUR",
+      "confidence": 0.6,
+      "reasoning": "Geopolitical instability in Eastern Europe, particularly involving Russia, can negatively affect the Euro due to proximity and economic ties. This news might increase perceived risk for the Eurozone."
+    },
+    {
+      "currency": "CHF",
+      "confidence": 0.55,
+      "reasoning": "As a traditional safe-haven currency, the Swiss Franc may see increased demand if the news contributes to broader geopolitical risk aversion."
+    }
+  ],
+  "processing_time_ms": 8675.61,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

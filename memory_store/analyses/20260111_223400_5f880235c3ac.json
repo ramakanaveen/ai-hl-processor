@@ -1,0 +1,19 @@
+{
+  "headline": "Rachel Reeves announces major tax increase on UK businesses",
+  "timestamp": "2026-01-11 22:34:00.778422",
+  "impacted_entities": [
+    {
+      "currency": "GBP",
+      "confidence": 0.85,
+      "reasoning": "Mock: UK-related keywords detected"
+    },
+    {
+      "currency": "USD",
+      "confidence": 0.9,
+      "reasoning": "Mock: US/Fed-related keywords detected"
+    }
+  ],
+  "processing_time_ms": 0.04,
+  "model_used": "gemini-flash-lite-latest",
+  "error": null
+}

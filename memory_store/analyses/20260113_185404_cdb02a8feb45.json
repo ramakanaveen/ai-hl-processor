@@ -1,0 +1,14 @@
+{
+  "headline": "ECB announces emergency \u20ac750 billion bond buying program",
+  "timestamp": "2026-01-13 18:54:04.669263",
+  "impacted_entities": [
+    {
+      "currency": "EUR",
+      "confidence": 0.95,
+      "reasoning": "The ECB's bond buying program directly impacts the Euro. The size of the program (\u20ac750 billion) suggests a significant intervention in the Eurozone bond market, likely influencing the Euro's value."
+    }
+  ],
+  "processing_time_ms": 1110.04,
+  "model_used": "gemini-2.0-flash-exp",
+  "error": null
+}

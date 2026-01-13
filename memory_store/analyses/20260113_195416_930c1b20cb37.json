@@ -1,0 +1,19 @@
+{
+  "headline": "Why are there huge protests going on in Iran?",
+  "timestamp": "2026-01-13 19:54:16.767662",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "Geopolitical instability in Iran can lead to increased oil prices, potentially impacting the USD through inflation expectations and safe-haven flows."
+    },
+    {
+      "currency": "EUR",
+      "confidence": 0.55,
+      "reasoning": "As a major global currency and often seen as a counterpoint to USD, EUR can be indirectly affected by shifts in geopolitical risk and commodity prices stemming from events in Iran."
+    }
+  ],
+  "processing_time_ms": 883.4,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

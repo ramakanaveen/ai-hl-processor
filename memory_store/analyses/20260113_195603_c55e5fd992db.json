@@ -1,0 +1,14 @@
+{
+  "headline": "Opinion: Why millionaires like us want to pay more in taxes",
+  "timestamp": "2026-01-13 19:56:03.664756",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.75,
+      "reasoning": "While the headline is an opinion piece, discussions around taxation, especially concerning high earners, can influence government fiscal policy and economic sentiment in the US, indirectly affecting the USD. Increased government revenue could potentially lead to reduced deficits or increased spending, both of which have implications for the currency."
+    }
+  ],
+  "processing_time_ms": 950.26,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

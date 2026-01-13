@@ -1,0 +1,29 @@
+{
+  "headline": "What we know about Iran's protests and the crackdown",
+  "timestamp": "2026-01-13 19:54:15.112520",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "Geopolitical instability in the Middle East can lead to increased demand for the US Dollar as a safe-haven asset, especially if it threatens oil supply or regional stability."
+    },
+    {
+      "currency": "EUR",
+      "confidence": 0.55,
+      "reasoning": "European economies have trade ties with the Middle East, and significant unrest could impact energy prices and investor sentiment, indirectly affecting the Euro."
+    },
+    {
+      "currency": "JPY",
+      "confidence": 0.5,
+      "reasoning": "In times of significant geopolitical uncertainty, the Japanese Yen can also act as a safe-haven currency, though its appeal might be secondary to the USD."
+    },
+    {
+      "currency": "CHF",
+      "confidence": 0.5,
+      "reasoning": "The Swiss Franc is a traditional safe-haven currency, and heightened geopolitical tensions in a major region could see some inflows."
+    }
+  ],
+  "processing_time_ms": 2705.75,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

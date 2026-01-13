@@ -1,0 +1,24 @@
+{
+  "headline": "'They just kept killing': Eyewitnesses describe deadly crackdown in Iran",
+  "timestamp": "2026-01-13 19:54:07.216946",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "Geopolitical instability in the Middle East can lead to increased demand for the US dollar as a safe-haven asset, especially if it involves major oil-producing regions or escalates tensions with other global powers."
+    },
+    {
+      "currency": "EUR",
+      "confidence": 0.55,
+      "reasoning": "While less of a primary safe-haven than USD, the Euro can also see some safe-haven flows during significant geopolitical turmoil, particularly if it impacts European energy security or trade routes."
+    },
+    {
+      "currency": "CHF",
+      "confidence": 0.55,
+      "reasoning": "The Swiss Franc is a traditional safe-haven currency, and significant geopolitical events often lead to increased demand for it."
+    }
+  ],
+  "processing_time_ms": 2073.39,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "headline": "Top US Navy admiral defends non-binary sailor amid some Republican criticism",
+  "timestamp": "2026-01-13 19:55:53.303549",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.65,
+      "reasoning": "The headline discusses internal US political and military matters. While not directly economic, such news can contribute to broader market sentiment and potentially influence investor confidence in US stability, indirectly affecting the USD. The previous analysis also flagged USD due to 'US/Fed-related keywords', though this specific headline doesn't contain those, the general US focus remains."
+    }
+  ],
+  "processing_time_ms": 8330.12,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

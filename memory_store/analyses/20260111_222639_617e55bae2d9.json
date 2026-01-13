@@ -1,0 +1,19 @@
+{
+  "headline": "China devalues yuan amid escalating trade tensions with US",
+  "timestamp": "2026-01-11 22:26:39.886295",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.9,
+      "reasoning": "Mock: US/Fed-related keywords detected"
+    },
+    {
+      "currency": "CNY",
+      "confidence": 0.8,
+      "reasoning": "Mock: China-related keywords detected"
+    }
+  ],
+  "processing_time_ms": 0.01,
+  "model_used": "gemini-flash-lite-latest",
+  "error": null
+}

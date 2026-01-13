@@ -1,0 +1,14 @@
+{
+  "headline": "The backlash against Trump\u2019s criminal probe into Powell",
+  "timestamp": "2026-01-13 19:52:28.094679",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.7,
+      "reasoning": "The headline mentions Donald Trump and Jerome Powell, both key figures in US politics and monetary policy respectively. Political uncertainty and potential implications for the Federal Reserve's independence can impact the US Dollar."
+    }
+  ],
+  "processing_time_ms": 1493.87,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

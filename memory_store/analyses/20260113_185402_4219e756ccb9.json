@@ -1,0 +1,14 @@
+{
+  "headline": "Rachel Reeves announces major tax increase on UK businesses",
+  "timestamp": "2026-01-13 18:54:02.263545",
+  "impacted_entities": [
+    {
+      "currency": "GBP",
+      "confidence": 0.85,
+      "reasoning": "UK Chancellor fiscal policy directly impacts British pound"
+    }
+  ],
+  "processing_time_ms": 2862.58,
+  "model_used": "gemini-2.0-flash-exp",
+  "error": null
+}

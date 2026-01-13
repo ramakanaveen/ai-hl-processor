@@ -1,0 +1,24 @@
+{
+  "headline": "Bowen: Authoritarian regimes die gradually then suddenly, but Iran is not there yet",
+  "timestamp": "2026-01-13 19:53:34.965737",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "Geopolitical instability in the Middle East, particularly involving Iran, can lead to increased demand for the US Dollar as a safe-haven asset, especially if tensions escalate and impact oil supply."
+    },
+    {
+      "currency": "EUR",
+      "confidence": 0.55,
+      "reasoning": "While less of a direct safe-haven than USD, significant geopolitical shifts involving major energy producers like Iran can indirectly affect the Eurozone's economic stability and thus its currency."
+    },
+    {
+      "currency": "JPY",
+      "confidence": 0.5,
+      "reasoning": "The Japanese Yen often acts as a safe-haven currency during periods of global uncertainty, though its reaction to Middle Eastern geopolitical events is typically less pronounced than the USD."
+    }
+  ],
+  "processing_time_ms": 8229.61,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

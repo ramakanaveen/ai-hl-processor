@@ -1,0 +1,24 @@
+{
+  "headline": "Mortuary videos show how deadly Iran crackdown has become",
+  "timestamp": "2026-01-13 19:54:12.403764",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "Geopolitical tensions involving Iran can lead to increased demand for the US Dollar as a safe-haven asset, especially if the situation escalates and impacts oil supply routes or global stability."
+    },
+    {
+      "currency": "EUR",
+      "confidence": 0.55,
+      "reasoning": "Similar to the USD, the Euro can also benefit from safe-haven flows during periods of heightened geopolitical risk, although typically to a lesser extent than the USD. European economies are also sensitive to disruptions in the Middle East."
+    },
+    {
+      "currency": "JPY",
+      "confidence": 0.5,
+      "reasoning": "The Japanese Yen is a traditional safe-haven currency. Significant geopolitical instability in a major region like the Middle East can trigger flows into the JPY."
+    }
+  ],
+  "processing_time_ms": 1317.79,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "headline": "Federal Reserve raises interest rates by 75 basis points",
+  "timestamp": "2026-01-13 18:54:03.557140",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.9,
+      "reasoning": "The Federal Reserve's interest rate decision directly impacts the US dollar."
+    }
+  ],
+  "processing_time_ms": 1292.55,
+  "model_used": "gemini-2.0-flash-exp",
+  "error": null
+}

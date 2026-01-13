@@ -1,0 +1,19 @@
+{
+  "headline": "Le Pen blames European Parliament in appeal that could decide political fate",
+  "timestamp": "2026-01-13 19:53:50.522507",
+  "impacted_entities": [
+    {
+      "currency": "EUR",
+      "confidence": 0.7,
+      "reasoning": "Marine Le Pen's political statements and potential electoral outcomes in France have significant implications for the Eurozone's political stability and economic outlook. Uncertainty surrounding French politics can lead to increased volatility in the Euro."
+    },
+    {
+      "currency": "CHF",
+      "confidence": 0.55,
+      "reasoning": "The Swiss Franc often acts as a safe-haven currency. Increased political uncertainty in a major European economy like France can lead to flows into the CHF as investors seek perceived safety."
+    }
+  ],
+  "processing_time_ms": 1117.38,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

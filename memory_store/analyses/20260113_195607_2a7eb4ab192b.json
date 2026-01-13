@@ -1,0 +1,29 @@
+{
+  "headline": "China's economy is off to a solid start, rising 4.5% in Q1 2023",
+  "timestamp": "2026-01-13 19:56:07.335317",
+  "impacted_entities": [
+    {
+      "currency": "CNY",
+      "confidence": 0.9,
+      "reasoning": "The headline directly mentions China's economy and its growth rate, which has a direct and significant impact on the Chinese Yuan (CNY). Positive economic data typically supports a stronger currency."
+    },
+    {
+      "currency": "AUD",
+      "confidence": 0.65,
+      "reasoning": "Australia has strong trade ties with China, particularly in commodities. Positive Chinese economic growth often translates to increased demand for Australian exports, supporting the Australian Dollar (AUD)."
+    },
+    {
+      "currency": "NZD",
+      "confidence": 0.6,
+      "reasoning": "Similar to Australia, New Zealand's economy is significantly influenced by Chinese demand for its exports, especially dairy and tourism. A strong Chinese economy is generally positive for the New Zealand Dollar (NZD)."
+    },
+    {
+      "currency": "CAD",
+      "confidence": 0.55,
+      "reasoning": "Canada's economy, while less directly tied than Australia or New Zealand, also benefits from robust global growth, which a strong Chinese economy contributes to. Increased commodity demand can also indirectly support the Canadian Dollar (CAD)."
+    }
+  ],
+  "processing_time_ms": 1720.34,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

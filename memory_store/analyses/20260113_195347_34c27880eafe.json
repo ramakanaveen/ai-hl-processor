@@ -1,0 +1,8 @@
+{
+  "headline": "'We were tricked': How one woman lures foreign men to fight on Russia's front line",
+  "timestamp": "2026-01-13 19:53:47.422332",
+  "impacted_entities": [],
+  "processing_time_ms": 885.52,
+  "model_used": "error",
+  "error": "1 validation error for CurrencyImpact\ncurrency\n  Input should be 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD' or 'CNY' [type=enum, input_value='RUB', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/enum"
+}

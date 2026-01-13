@@ -1,16 +1,26 @@
 # AI Headline Impact Processor - Core Dependencies
-# Minimal required packages for the system to function
 
-# Core Data Processing
-numpy>=1.26.0
-pandas>=2.0.0
-
-# Google Cloud / Vertex AI (for Gemini Flash)
-google-cloud-aiplatform>=1.38.0
-
-# Configuration and Environment
+# Core
 python-dotenv>=1.0.0
 
-# Optional: Development and Testing
+# LangChain + Agents + Google Vertex AI (Gemini)
+langchain>=0.3.0
+langchain-google-vertexai>=2.0.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+google-cloud-aiplatform>=1.38.0
+
+# Data Validation
+pydantic>=2.0.0
+
+# Feed Adapters - RSS and WebSocket support
+websockets>=12.0
+feedparser>=6.0.10
+pyyaml>=6.0
+
+# Future feed adapters (optional)
+# aiokafka>=0.10.0
+
+# Testing
 pytest>=7.4.0
 pytest-asyncio>=0.21.0

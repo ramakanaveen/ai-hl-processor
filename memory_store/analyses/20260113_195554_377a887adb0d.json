@@ -1,0 +1,14 @@
+{
+  "headline": "Fulton County DA says fake Trump electors are incriminating one another and wants lawyer disqualified",
+  "timestamp": "2026-01-13 19:55:54.114748",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "The headline refers to a legal and political development within the United States involving a former President. While not directly economic, significant political uncertainty or perceived instability in the US can lead to shifts in market sentiment and potentially impact the US Dollar, especially if it raises concerns about future US policy or stability."
+    }
+  ],
+  "processing_time_ms": 805.39,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "headline": "Federal Reserve raises interest rates by 75 basis points",
+  "timestamp": "2026-01-11 22:34:00.778677",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.9,
+      "reasoning": "Mock: US/Fed-related keywords detected"
+    }
+  ],
+  "processing_time_ms": 0.01,
+  "model_used": "gemini-flash-lite-latest",
+  "error": null
+}

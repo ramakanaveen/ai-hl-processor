@@ -1,0 +1,24 @@
+{
+  "headline": "Two Russians claiming to be former Wagner commanders admit killing children and civilians in Ukraine",
+  "timestamp": "2026-01-13 19:55:11.423320",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.75,
+      "reasoning": "The news highlights ongoing geopolitical tensions related to the conflict in Ukraine, which can lead to safe-haven flows into the USD as a global reserve currency."
+    },
+    {
+      "currency": "EUR",
+      "confidence": 0.65,
+      "reasoning": "The conflict in Ukraine directly impacts European stability and security, potentially leading to increased risk aversion and affecting the EUR."
+    },
+    {
+      "currency": "CHF",
+      "confidence": 0.6,
+      "reasoning": "The Swiss Franc is often considered a safe-haven currency, and heightened geopolitical risks stemming from the Ukraine conflict could increase demand for CHF."
+    }
+  ],
+  "processing_time_ms": 1222.57,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

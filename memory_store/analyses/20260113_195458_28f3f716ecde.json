@@ -1,0 +1,14 @@
+{
+  "headline": "Netflix is winding down its DVD business after 25 years",
+  "timestamp": "2026-01-13 19:54:58.826255",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "Netflix is a US-based company, and significant strategic shifts like closing a long-standing business unit can influence investor sentiment towards US equities and, by extension, the US dollar. While not a direct macroeconomic event, it reflects on the health and strategic direction of a major US corporation."
+    }
+  ],
+  "processing_time_ms": 911.94,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

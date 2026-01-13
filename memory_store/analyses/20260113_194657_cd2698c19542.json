@@ -1,0 +1,14 @@
+{
+  "headline": "China's economy is off to a solid start, rising 4.5% in Q1 2023",
+  "timestamp": "2026-01-13 19:46:57.281201",
+  "impacted_entities": [
+    {
+      "currency": "CNY",
+      "confidence": 0.8,
+      "reasoning": "Mock: China-related keywords detected"
+    }
+  ],
+  "processing_time_ms": 0.01,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

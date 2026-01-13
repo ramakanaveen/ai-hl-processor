@@ -1,0 +1,21 @@
+feeds:
+  - name: "Financial Times World"
+    url: "https://www.ft.com/world?format=rss"
+    poll_interval_seconds: 60
+
+  - name: "BBC News - World"
+    url: "http://feeds.bbci.co.uk/news/world/rss.xml"
+    poll_interval_seconds: 45
+
+  - name: "CNN Top Stories"
+    url: "http://rss.cnn.com/rss/cnn_topstories.rss"
+    poll_interval_seconds: 60
+
+websocket:
+  url: "ws://localhost:8765"
+  reconnect_interval_seconds: 5
+
+deduplication:
+  storage: "file"
+  file_path: "seen_headlines.json"
+  max_age_hours: 24
