@@ -1,81 +1,57 @@
 # AI Headline Impact Processor
 
-Real-time financial headline analysis system. Headlines flow from a source (CSV file or KDB+) into Kafka, get analysed by a LangChain + Gemini agent for currency impact, and results are streamed to consumers via SSE.
+Analyses financial news headlines in real-time and predicts which currency pairs are impacted, with confidence scores and reasoning. Uses Google Gemini Flash (via Vertex AI) with a memory-enhanced LangChain agent.
 
-## Architecture
+---
+
+## How it works
 
 ```
-Source (CSV / KDB+)
-        │
-        ▼
- kafka_producer  ──►  Kafka: raw-headlines
-                               │
-                               ▼
-                          main.py --stream   (HeadlineImpactAnalyzer + Gemini / Mock LLM)
-                               │
-                               ▼
-                       Kafka: headline-impacts
-                               │
-                    ┌──────────┴──────────┐
-                    ▼                     ▼
-              SSE /events          downstream consumers
-         (http://localhost:8080)
+Source (CSV file or KDB+)
+    │  kafka_producer
+    ▼
+Kafka: raw-headlines
+    │  main.py --stream
+    ▼
+Gemini / Mock LLM  +  memory (past analyses)
+    │
+    ▼
+Kafka: headline-impacts
+    │  sse_server
+    ▼
+GET /events  (SSE stream → UI / downstream consumers)
 ```
 
 ---
 
-## Prerequisites
+## Setup
 
-| Requirement | Version |
-|---|---|
-| Python | 3.11+ |
-| Docker Desktop | any recent |
-| Google Cloud project + Vertex AI | UAT / prod only |
-
----
-
-## First-time setup
+**Requirements:** Python 3.11+, Docker Desktop
 
 ```bash
-# 1. Install Python dependencies
 pip3 install -r requirements.txt
-
-# 2. Copy env file and fill in your Google Cloud credentials (UAT/prod only)
-cp .env.example .env
+cp .env.example .env          # add Google Cloud credentials for uat/prod
 ```
 
-`.env` keys:
+`.env` for UAT / prod:
 ```
 GOOGLE_CLOUD_PROJECT=your-project-id
 GOOGLE_CREDENTIALS_PATH=/path/to/service-account.json
-ENV=dev                          # test | dev | uat | prod
 ```
 
-For `test` / `dev` environments the LLM is mocked — no Google Cloud credentials needed.
-
----
-
-## Environments
-
-| ENV  | LLM | Notes |
-|------|-----|-------|
-| `test` | mock (keyword match) | No API calls, instant |
-| `dev`  | mock | Debug logging |
-| `uat`  | Gemini Flash (real) | Needs GCP credentials |
-| `prod` | Gemini Flash (real) | Rate-limited, full observability |
+For `dev` / `test` environments the LLM is mocked — no credentials needed.
 
 ---
 
 ## Running the pipeline
 
-### Step 1 — Start Kafka
+### 1. Start Kafka
 
 ```bash
 docker compose up -d
 ```
 
-Wait ~10 seconds for the broker to be healthy, then create topics (first run only):
-
+First run only — create the topics:
 ```bash
 docker exec kafka kafka-topics --create --if-not-exists \
   --bootstrap-server localhost:9092 --topic raw-headlines --partitions 3 --replication-factor 1
@@ -84,125 +60,76 @@ docker exec kafka kafka-topics --create --if-not-exists \
   --bootstrap-server localhost:9092 --topic headline-impacts --partitions 3 --replication-factor 1
 ```
 
-Verify:
-```bash
-docker exec kafka kafka-topics --list --bootstrap-server localhost:9092
-```
-
----
-
-### Step 2 — Start the Analyzer
-
-Consumes `raw-headlines`, runs LLM analysis, publishes results to `headline-impacts`.
+### 2. Start the analyzer
 
 ```bash
 python3 main.py --stream --environment dev
 ```
 
-Logs to stdout. Leave this running in its own terminal.
+Consumes `raw-headlines` → runs LLM → publishes to `headline-impacts`.
 
----
-
-### Step 3 — Start the SSE Server
-
-Consumes `headline-impacts` and fans results out to SSE clients.
+### 3. Start the SSE server
 
 ```bash
 python3 services/sse_server/run_sse.py --environment dev --port 8080
 ```
 
-Endpoints:
-- `GET http://localhost:8080/events` — SSE stream
-- `GET http://localhost:8080/health` — health check + connected client count
+### 4. Start a producer
 
----
-
-### Step 4 — Start a Producer
-
-#### From a CSV file
-
-CSV must have columns: `headline, source, timestamp`
-`timestamp` is optional (ISO-8601, defaults to now).
-Rate: 1 headline/second by default (configurable via `file_source_rate_per_second` in `config.ini`).
-
+**From a CSV file** (`headline, source, timestamp` columns — timestamp optional):
 ```bash
-python3 services/kafka_producer/run_producer.py \
-  --source file \
-  --file data/headlines.csv \
-  --environment dev
+python3 services/kafka_producer/run_producer.py --source file --file data/headlines.csv
 ```
 
-A sample file is at `data/headlines.csv`.
-
-#### From KDB+
-
-Polls KDB+ every 60 seconds. Configure connection in `config.ini` under `[kdb]` or via env vars:
-
+**From KDB+** (polls every 60s):
 ```bash
-export KDB_HOST=localhost
-export KDB_PORT=5000
-
-python3 services/kafka_producer/run_producer.py \
-  --source kdb \
-  --environment uat
+python3 services/kafka_producer/run_producer.py --source kdb --environment uat
 ```
 
-KDB config in `config.ini`:
-```ini
-[kdb]
-host = localhost
-port = 5000
-query = select text, source, time from headlines where date=.z.d
-poll_interval_seconds = 60
-```
-
----
-
-### Step 5 — Consume the SSE stream
+### 5. Consume results
 
 ```bash
 curl http://localhost:8080/events
 ```
 
-Each event looks like:
-```
-data: {"type": "analysis_result", "timestamp": "...", "data": {
-         "headline": "Federal Reserve raises rates by 75bps",
-         "impacted_entities": [
-           {"currency": "USD", "confidence": 0.9, "reasoning": "..."},
-           {"currency": "EUR", "confidence": 0.75, "reasoning": "..."}
-         ],
-         "processing_time_ms": 1240,
-         "model_used": "gemini-2.5-flash-lite"
-       }}
+Each event:
+```json
+data: {
+  "type": "analysis_result",
+  "data": {
+    "headline": "Federal Reserve raises rates by 75bps",
+    "impacted_entities": [
+      {"currency": "USD", "confidence": 0.90, "reasoning": "..."},
+      {"currency": "EUR", "confidence": 0.75, "reasoning": "..."}
+    ],
+    "processing_time_ms": 1240,
+    "model_used": "gemini-2.5-flash-lite"
+  }
+}
 ```
 
----
-
-## One-shot script (file source)
+### Stop everything
 
 ```bash
-# Starts Kafka (Docker), analyzer, SSE server, and file producer in one go
-./scripts/start_all.sh dev data/headlines.csv
-
-# KDB source
-./scripts/start_all.sh uat
-```
-
-Stop everything:
-```bash
-pkill -f "main.py --stream"
-pkill -f "run_sse.py"
-pkill -f "run_producer.py"
+pkill -f "main.py --stream"; pkill -f "run_sse.py"; pkill -f "run_producer.py"
 docker compose down
 ```
 
 ---
 
-## One-off headline analysis (no Kafka)
+## One-shot script
 
 ```bash
-# Single headline, mock LLM
+./scripts/start_all.sh dev data/headlines.csv   # file source
+./scripts/start_all.sh uat                       # kdb source
+```
+
+---
+
+## One-off analysis (no Kafka needed)
+
+```bash
+# Single headline
 python3 main.py --analyze "ECB cuts rates by 50bps" --environment dev
 
 # JSON output
@@ -214,54 +141,81 @@ python3 main.py --demo --environment dev
 
 ---
 
+## Environments
+
+| ENV | LLM | Use for |
+|-----|-----|---------|
+| `test` | mock | CI, fast checks |
+| `dev` | mock | local development |
+| `uat` | Gemini Flash | pre-prod validation |
+| `prod` | Gemini Flash | production |
+
+---
+
+## KDB+ configuration
+
+Edit `config.ini` or set env vars:
+
+```ini
+[kdb]
+host = localhost
+port = 5000
+query = select text, source, time from headlines where date=.z.d
+poll_interval_seconds = 60
+```
+
+Env var overrides: `KDB_HOST`, `KDB_PORT`, `KDB_USERNAME`, `KDB_PASSWORD`
+
+---
+
 ## Project structure
 
 ```
-main.py                          # Analyzer entry point (--analyze / --demo / --stream)
-config.ini                       # All environment config
-docker-compose.yml               # Kafka + Zookeeper
+main.py                         # --analyze / --demo / --stream
+config.ini                      # all environment config
+docker-compose.yml              # local Kafka + Zookeeper
 
 src/
+  config/loader.py              # typed config, get_feed_config(), get_kdb_config()
   core/
-    analyzer.py                  # HeadlineImpactAnalyzer — orchestrates agent + memory
-    agent.py                     # LangChain agent (mock or Gemini)
-    models.py                    # Pydantic models: Headline, CurrencyImpact, ImpactAnalysisResult
+    models.py                   # Headline, CurrencyImpact, ImpactAnalysisResult
+    agent.py                    # LangChain agent (Gemini or mock)
+    analyzer.py                 # orchestrates agent + memory per headline
   llm/
-    prompts.py                   # System + user prompts
-    client_factory.py            # Returns mock or Gemini agent based on environment
+    prompts.py                  # system + user prompts
+    client_factory.py           # returns correct agent for environment
   memory/
-    file_store.py                # Persists analyses to memory_store/, Jaccard similarity search
-    pattern_tracker.py           # Learns event-currency patterns across history
-  sources/
-    base.py                      # HeadlineSource ABC
-    file_source.py               # CSV reader with rate limiting
-    kdb_source.py                # qpython KDB+ poller with deduplication
+    file_store.py               # persists analyses, Jaccard similarity search
+    pattern_tracker.py          # event-currency pattern learning
+    tools.py                    # LangChain memory tools
   feeds/
-    kafka_adapter.py             # KafkaFeedAdapter — consumes raw-headlines → Headline objects
-  config/
-    loader.py                    # Typed config dataclasses; get_feed_config(), get_kdb_config()
+    base.py                     # FeedAdapter ABC
+    kafka_adapter.py            # consumes raw-headlines → Headline objects
+  sources/
+    base.py                     # HeadlineSource ABC
+    file_source.py              # CSV, rate-limited (1/sec)
+    kdb_source.py               # qpython poll + SHA-256 dedup
 
 services/
   kafka_producer/
-    producer_service.py          # KafkaProducerService: any HeadlineSource → Kafka topic
-    run_producer.py              # Entry point: --source file|kdb
+    producer_service.py         # HeadlineSource → Kafka topic
+    run_producer.py             # entry point: --source file|kdb
   sse_server/
-    sse_server.py                # FastAPI SSE app, per-client asyncio.Queue fan-out
-    run_sse.py                   # Entry point: uvicorn on port 8080
+    sse_server.py               # FastAPI SSE, per-client queue fan-out
+    run_sse.py                  # entry point: uvicorn on --port
 
-data/
-  headlines.csv                  # Sample headlines for testing
-
-logs/                            # Runtime logs (gitignored)
-memory_store/                    # Persisted LLM analyses (gitignored)
+scripts/
+  start_all.sh                  # start all services
+  stop_all.sh                   # stop all services
+  health_check.sh               # check service status
 ```
 
 ---
 
 ## Adding a new headline source
 
-1. Create `src/sources/my_source.py` implementing `HeadlineSource` (connect / disconnect / stream_headlines / is_connected)
-2. Add a new `elif args.source == 'mysource':` branch in `services/kafka_producer/run_producer.py`
-3. Add any config it needs to `config.ini` and `src/config/loader.py`
+1. Create `src/sources/my_source.py` implementing `HeadlineSource` (`connect`, `disconnect`, `stream_headlines`, `is_connected`)
+2. Add an `elif args.source == 'mysource':` branch in `services/kafka_producer/run_producer.py`
+3. Add any config to `config.ini` and expose it via `src/config/loader.py`
 
-The analyzer, SSE server, and everything downstream needs no changes.
+Nothing else changes.
