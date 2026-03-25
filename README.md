@@ -1,442 +1,267 @@
 # AI Headline Impact Processor
 
-A real-time semantic analysis system for assessing the impact of financial news headlines on markets, currencies, and trading algorithms. The system uses advanced LLMs (Google Gemini Flash) combined with economic knowledge graphs to provide probabilistic impact assessments with <2 second response times.
+Real-time financial headline analysis system. Headlines flow from a source (CSV file or KDB+) into Kafka, get analysed by a LangChain + Gemini agent for currency impact, and results are streamed to consumers via SSE.
 
-## 🚀 Key Features
-
-- **Semantic News Analysis**: Extract structured events and causal relationships from financial headlines
-- **Multi-Dimensional Impact Assessment**: Analyze impact across currencies, commodities, and trading algorithms
-- **Economic Knowledge Graph**: Pre-built relationships between countries, currencies, and economic dependencies
-- **Real-Time Processing**: Sub-2 second response times with parallel entity assessment
-- **Causal Reasoning**: Understanding of second and third-order economic effects
-- **Environment-Based Configuration**: Separate configs for test/dev/uat/prod environments
-- **CLI & API Interface**: Full command-line tool and Python API
-
-## 📊 System Architecture
+## Architecture
 
 ```
-Financial News Headline
-        ↓
-┌─────────────────────────────────────────────────────────┐
-│              Semantic Impact Engine                     │
-│  • Event Extraction (LLM-powered)                      │
-│  • Entity Relevance Detection                          │
-│  • Economic Context Enrichment                         │
-└─────────────────────────────────────────────────────────┘
-        ↓
-┌─────────────────────────────────────────────────────────┐
-│          Economic Knowledge Graph                       │
-│  • Country-Currency Relationships                      │
-│  • Trade Dependencies                                  │
-│  • Economic Relationships                              │
-└─────────────────────────────────────────────────────────┘
-        ↓
-┌─────────────────────────────────────────────────────────┐
-│            Feature Engineering Pipeline                 │
-│  • Contextual Feature Extraction                       │
-│  • Entity-Specific Features                            │
-│  • Multi-dimensional Feature Vectors                   │
-└─────────────────────────────────────────────────────────┘
-        ↓
-┌─────────────────────────────────────────────────────────┐
-│              Impact Assessment Engine                   │
-│  • Google Gemini Flash (Production/UAT)                │
-│  • Mock LLM (Test/Dev)                                 │
-│  • Probability Distribution Output                     │
-│  • Parallel Entity Processing                          │
-└─────────────────────────────────────────────────────────┘
+Source (CSV / KDB+)
+        │
+        ▼
+ kafka_producer  ──►  Kafka: raw-headlines
+                               │
+                               ▼
+                          main.py --stream   (HeadlineImpactAnalyzer + Gemini / Mock LLM)
+                               │
+                               ▼
+                       Kafka: headline-impacts
+                               │
+                    ┌──────────┴──────────┐
+                    ▼                     ▼
+              SSE /events          downstream consumers
+         (http://localhost:8080)
 ```
 
-## 🛠 Installation
+---
 
-### Prerequisites
-- Python 3.8+
-- Google Cloud Project with Vertex AI enabled (for production/UAT)
-- Service account credentials
+## Prerequisites
 
-### Setup
+| Requirement | Version |
+|---|---|
+| Python | 3.11+ |
+| Docker Desktop | any recent |
+| Google Cloud project + Vertex AI | UAT / prod only |
 
-1. **Clone and Install Dependencies**
+---
+
+## First-time setup
+
 ```bash
-git clone https://github.com/ramakanaveen/ai-hl-processor.git
-cd ai-hl-processor
-pip install -r requirements.txt
-```
+# 1. Install Python dependencies
+pip3 install -r requirements.txt
 
-2. **Environment Configuration**
-
-Copy the example environment file and configure it:
-```bash
+# 2. Copy env file and fill in your Google Cloud credentials (UAT/prod only)
 cp .env.example .env
 ```
 
-Edit `.env` with your settings:
-```bash
-# Google Cloud Configuration
+`.env` keys:
+```
 GOOGLE_CLOUD_PROJECT=your-project-id
-GOOGLE_CREDENTIALS_PATH=/path/to/service-account-key.json
-
-# Environment (optional, defaults to 'test')
-ENV=test  # Options: test, dev, uat, prod
-
-# Database (optional)
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=finance_user
-DB_PASSWORD=your-password
-DB_NAME=financial_news_db
-
-# Redis (optional)
-REDIS_HOST=localhost
-REDIS_PORT=6379
+GOOGLE_CREDENTIALS_PATH=/path/to/service-account.json
+ENV=dev                          # test | dev | uat | prod
 ```
 
-## 🚀 Quick Start
+For `test` / `dev` environments the LLM is mocked — no Google Cloud credentials needed.
 
-### Command Line Interface
+---
 
-The system provides a comprehensive CLI for all operations:
+## Environments
 
-**Run Demo** (analyze sample headlines):
+| ENV  | LLM | Notes |
+|------|-----|-------|
+| `test` | mock (keyword match) | No API calls, instant |
+| `dev`  | mock | Debug logging |
+| `uat`  | Gemini Flash (real) | Needs GCP credentials |
+| `prod` | Gemini Flash (real) | Rate-limited, full observability |
+
+---
+
+## Running the pipeline
+
+### Step 1 — Start Kafka
+
 ```bash
-python main.py demo
-
-# Analyze specific number of headlines
-python main.py demo --count 3
+docker compose up -d
 ```
 
-**Analyze Single Headline**:
+Wait ~10 seconds for the broker to be healthy, then create topics (first run only):
+
 ```bash
-python main.py analyze "Fed raises interest rates by 0.75%"
+docker exec kafka kafka-topics --create --if-not-exists \
+  --bootstrap-server localhost:9092 --topic raw-headlines --partitions 3 --replication-factor 1
 
-# With specific entities
-python main.py analyze "ECB bond buying program" --entities EURUSD GBPUSD
-
-# Different output formats
-python main.py analyze "Russia attacks Ukraine" --format json
-python main.py analyze "OPEC cuts production" --format table
-
-# Save to file
-python main.py analyze "BOE intervenes" --output results.json
+docker exec kafka kafka-topics --create --if-not-exists \
+  --bootstrap-server localhost:9092 --topic headline-impacts --partitions 3 --replication-factor 1
 ```
 
-**Batch Processing**:
+Verify:
 ```bash
-# Process multiple headlines from file
-python main.py batch --input headlines.txt --output results.json
-
-# Control concurrency
-python main.py batch --input headlines.txt --output results.json --max-concurrent 10
+docker exec kafka kafka-topics --list --bootstrap-server localhost:9092
 ```
 
-**Test System Components**:
+---
+
+### Step 2 — Start the Analyzer
+
+Consumes `raw-headlines`, runs LLM analysis, publishes results to `headline-impacts`.
+
 ```bash
-# Test all components
-python main.py test
-
-# Test specific component
-python main.py test --component semantic
-python main.py test --component economic
-python main.py test --component poc
+python3 main.py --stream --environment dev
 ```
 
-**Performance Benchmark**:
+Logs to stdout. Leave this running in its own terminal.
+
+---
+
+### Step 3 — Start the SSE Server
+
+Consumes `headline-impacts` and fans results out to SSE clients.
+
 ```bash
-python main.py benchmark --iterations 20
+python3 services/sse_server/run_sse.py --environment dev --port 8080
 ```
 
-**Environment Control**:
+Endpoints:
+- `GET http://localhost:8080/events` — SSE stream
+- `GET http://localhost:8080/health` — health check + connected client count
+
+---
+
+### Step 4 — Start a Producer
+
+#### From a CSV file
+
+CSV must have columns: `headline, source, timestamp`
+`timestamp` is optional (ISO-8601, defaults to now).
+Rate: 1 headline/second by default (configurable via `file_source_rate_per_second` in `config.ini`).
+
 ```bash
-# Use specific environment via CLI
-python main.py demo --environment prod
-
-# Use environment via ENV variable
-ENV=uat python main.py demo
-
-# Enable verbose logging
-python main.py demo --verbose
+python3 services/kafka_producer/run_producer.py \
+  --source file \
+  --file data/headlines.csv \
+  --environment dev
 ```
 
-### Python API Usage
+A sample file is at `data/headlines.csv`.
 
-```python
-import asyncio
-from poc_implementation import POCImpactAssessor
+#### From KDB+
 
-async def analyze_news():
-    # Initialize the assessor
-    assessor = POCImpactAssessor()
+Polls KDB+ every 60 seconds. Configure connection in `config.ini` under `[kdb]` or via env vars:
 
-    # Analyze a news headline
-    headline = "ECB announces emergency bond buying program"
-    result = await assessor.analyze_news_impact(headline)
+```bash
+export KDB_HOST=localhost
+export KDB_PORT=5000
 
-    # View results
-    print(f"Processing Time: {result.total_processing_time_ms:.1f}ms")
-    print(f"Entities Analyzed: {result.entities_processed}")
-    print(f"Overall Confidence: {result.overall_confidence:.3f}")
-
-    # View entity assessments
-    for assessment in result.entity_assessments:
-        print(f"\n{assessment.entity_id}:")
-        print(f"  Major Impact: {assessment.probabilities.case_3_major:.3f}")
-        print(f"  Moderate Impact: {assessment.probabilities.case_2_moderate:.3f}")
-        print(f"  Minor Impact: {assessment.probabilities.case_1_minor:.3f}")
-        print(f"  Confidence: {assessment.confidence_score:.3f}")
-
-# Run the analysis
-asyncio.run(analyze_news())
+python3 services/kafka_producer/run_producer.py \
+  --source kdb \
+  --environment uat
 ```
 
-**Advanced Configuration**:
-```python
-from config_loader import get_config
-
-# Load specific environment configuration
-config = get_config(environment='prod')
-
-# Access configuration
-print(f"Model: {config.model_config.model_name}")
-print(f"Provider: {config.model_config.provider}")
-print(f"Using Mock LLM: {config.model_config.use_mock_llm}")
-print(f"Max Concurrent Calls: {config.performance_config.max_concurrent_llm_calls}")
-
-# Validate configuration
-issues = config.validate_config()
-if issues:
-    for issue in issues:
-        print(f"Warning: {issue}")
-```
-
-## 📁 Project Structure
-
-```
-ai-hl-processor/
-├── main.py                        # CLI entry point with full command interface
-├── config_loader.py               # Environment-based configuration system
-├── config.ini                     # Configuration file (test/dev/uat/prod)
-├── semantic_impact_engine.py      # Core semantic analysis engine
-├── economic_knowledge_graph.py    # Economic relationships and dependencies
-├── feature_engineering.py         # Multi-dimensional feature extraction
-├── poc_implementation.py          # POC with Google Gemini integration
-├── requirements.txt               # Python dependencies
-├── requirements-minimal.txt       # Minimal dependencies for testing
-├── .env.example                   # Environment template
-├── .gitignore                     # Git ignore rules
-└── README.md                      # This file
-```
-
-## 🔧 Configuration
-
-### Environment Types
-
-The system uses `config.ini` with four environment sections:
-
-#### `[test]` - Test Environment
-- Mock LLM for fast testing
-- Minimal concurrency (1 concurrent call)
-- Short timeouts (10s)
-- Warning-level logging
-- No monitoring/metrics
-
-#### `[dev]` - Development Environment
-- Mock LLM for development
-- Low concurrency (2 concurrent calls)
-- Debug logging enabled
-- Feature caching disabled
-- No rate limiting
-
-#### `[uat]` - UAT Environment
-- Real Google Gemini Flash
-- Moderate concurrency (3 concurrent calls)
-- Info-level logging
-- Prometheus metrics enabled
-- Audit logging enabled
-
-#### `[prod]` - Production Environment
-- Real Google Gemini Flash
-- High concurrency (10 concurrent calls)
-- Warning-level logging
-- All security features enabled
-- Rate limiting enabled
-- Request validation enabled
-- Full monitoring stack
-
-### Configuration Priority
-
-The environment is determined in this order:
-1. CLI argument: `--environment prod`
-2. ENV variable: `ENV=uat`
-3. Default: `test`
-
-### Configuration File Structure
-
+KDB config in `config.ini`:
 ```ini
-[DEFAULT]
-# Shared defaults for all environments
-max_tokens = 2048
-temperature = 0.3
-timeout_seconds = 30
-...
-
-[test]
-# Test-specific overrides
-provider = mock_llm
-use_mock_llm = true
-log_level = WARNING
-...
-
-[prod]
-# Production-specific overrides
-provider = gemini_flash
-use_mock_llm = false
-rate_limit_rpm = 300
-log_level = WARNING
-...
+[kdb]
+host = localhost
+port = 5000
+query = select text, source, time from headlines where date=.z.d
+poll_interval_seconds = 60
 ```
 
-## 🎯 Example Use Cases
+---
 
-### Case 1: Currency Impact Analysis
-**Input**: "Russia launches missile attack on Ukrainian energy infrastructure"
+### Step 5 — Consume the SSE stream
 
-**Analysis Chain**:
-- Direct conflict impact detected
-- Energy supply disruption inferred
-- Safe haven flow prediction
-- EUR weakness expected
-
-**Output**:
-```
-EURUSD:
-  Major Impact: 0.650
-  Moderate Impact: 0.250
-  Minor Impact: 0.100
-  Confidence: 0.85
-```
-
-### Case 2: Central Bank Policy
-**Input**: "Federal Reserve raises interest rates by 0.75 basis points"
-
-**Analysis Chain**:
-- Monetary policy tightening
-- USD strengthening expected
-- Cross-currency impacts analyzed
-
-**Output**:
-```
-EURUSD: Major Impact (USD strength)
-USDJPY: Moderate Impact (rate differential)
-GBPUSD: Major Impact (USD strength)
-```
-
-### Case 3: Commodity Shock
-**Input**: "OPEC+ announces surprise oil production cut of 2 million barrels per day"
-
-**Analysis Chain**:
-- Supply shock identified
-- Oil price surge expected
-- Energy exporter currencies strengthened
-- Commodity-linked impacts
-
-## 🎯 Performance Targets
-
-| Metric | Test/Dev | UAT | Production |
-|--------|----------|-----|------------|
-| Response Time (p95) | N/A | <2.0s | <1.5s |
-| Concurrent Calls | 1-2 | 3 | 10 |
-| Mock LLM | Yes | No | No |
-| Rate Limiting | No | Yes | Yes |
-| Monitoring | No | Yes | Yes |
-
-## 📈 Monitoring & Statistics
-
-Get runtime statistics:
-```python
-stats = assessor.get_performance_stats()
-print(f"Analyses completed: {stats['analyses_completed']}")
-print(f"Average time: {stats['average_processing_time']:.2f}ms")
-print(f"Entities processed: {stats['entities_processed']}")
-```
-
-## 🧪 Testing
-
-**Run all system tests**:
 ```bash
-python main.py test
+curl http://localhost:8080/events
 ```
 
-**Test specific components**:
+Each event looks like:
+```
+data: {"type": "analysis_result", "timestamp": "...", "data": {
+         "headline": "Federal Reserve raises rates by 75bps",
+         "impacted_entities": [
+           {"currency": "USD", "confidence": 0.9, "reasoning": "..."},
+           {"currency": "EUR", "confidence": 0.75, "reasoning": "..."}
+         ],
+         "processing_time_ms": 1240,
+         "model_used": "gemini-2.5-flash-lite"
+       }}
+```
+
+---
+
+## One-shot script (file source)
+
 ```bash
-python main.py test --component semantic    # Semantic engine
-python main.py test --component economic    # Knowledge graph
-python main.py test --component features    # Feature engineering
-python main.py test --component poc         # POC implementation
+# Starts Kafka (Docker), analyzer, SSE server, and file producer in one go
+./scripts/start_all.sh dev data/headlines.csv
+
+# KDB source
+./scripts/start_all.sh uat
 ```
 
-**Run benchmarks**:
+Stop everything:
 ```bash
-python main.py benchmark --iterations 50
+pkill -f "main.py --stream"
+pkill -f "run_sse.py"
+pkill -f "run_producer.py"
+docker compose down
 ```
 
-## 🔒 Security Features
+---
 
-- **Environment isolation**: Separate configs for each environment
-- **Credential management**: Google Cloud credentials via service account
-- **Input validation**: Request validation in production
-- **Rate limiting**: Configurable rate limits per environment
-- **Audit logging**: Full audit trail in UAT/production
-- **.env protection**: Credentials never committed to git
+## One-off headline analysis (no Kafka)
 
-## 🚀 Deployment Checklist
-
-### Development
 ```bash
-ENV=dev python main.py demo
+# Single headline, mock LLM
+python3 main.py --analyze "ECB cuts rates by 50bps" --environment dev
+
+# JSON output
+python3 main.py --analyze "ECB cuts rates by 50bps" --environment dev --json
+
+# 5 demo headlines
+python3 main.py --demo --environment dev
 ```
 
-### UAT
-1. Set `ENV=uat` or use `--environment uat`
-2. Ensure `GOOGLE_CLOUD_PROJECT` is set
-3. Ensure `GOOGLE_CREDENTIALS_PATH` points to valid service account
-4. Run: `python main.py test` to verify setup
+---
 
-### Production
-1. Set `ENV=prod` or use `--environment prod`
-2. Verify Google Cloud credentials
-3. Test configuration: `python main.py test --component all`
-4. Run benchmark: `python main.py benchmark`
-5. Monitor metrics and logs
+## Project structure
 
-## 🤝 Contributing
+```
+main.py                          # Analyzer entry point (--analyze / --demo / --stream)
+config.ini                       # All environment config
+docker-compose.yml               # Kafka + Zookeeper
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Test your changes (`python main.py test`)
-4. Commit your changes (`git commit -m 'Add amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
+src/
+  core/
+    analyzer.py                  # HeadlineImpactAnalyzer — orchestrates agent + memory
+    agent.py                     # LangChain agent (mock or Gemini)
+    models.py                    # Pydantic models: Headline, CurrencyImpact, ImpactAnalysisResult
+  llm/
+    prompts.py                   # System + user prompts
+    client_factory.py            # Returns mock or Gemini agent based on environment
+  memory/
+    file_store.py                # Persists analyses to memory_store/, Jaccard similarity search
+    pattern_tracker.py           # Learns event-currency patterns across history
+  sources/
+    base.py                      # HeadlineSource ABC
+    file_source.py               # CSV reader with rate limiting
+    kdb_source.py                # qpython KDB+ poller with deduplication
+  feeds/
+    kafka_adapter.py             # KafkaFeedAdapter — consumes raw-headlines → Headline objects
+  config/
+    loader.py                    # Typed config dataclasses; get_feed_config(), get_kdb_config()
 
-## 📄 License
+services/
+  kafka_producer/
+    producer_service.py          # KafkaProducerService: any HeadlineSource → Kafka topic
+    run_producer.py              # Entry point: --source file|kdb
+  sse_server/
+    sse_server.py                # FastAPI SSE app, per-client asyncio.Queue fan-out
+    run_sse.py                   # Entry point: uvicorn on port 8080
 
-This project is licensed under the MIT License.
+data/
+  headlines.csv                  # Sample headlines for testing
 
-## 🆘 Support
+logs/                            # Runtime logs (gitignored)
+memory_store/                    # Persisted LLM analyses (gitignored)
+```
 
-For issues or questions:
-- Create an issue on GitHub
-- Check the configuration documentation in `config.ini`
-- Review CLI help: `python main.py --help`
+---
 
-## 🔮 Roadmap
+## Adding a new headline source
 
-- [ ] Bloomberg Terminal integration
-- [ ] Real-time streaming mode
-- [ ] Historical backtesting framework
-- [ ] Fine-tuned model for production (replace Gemini)
-- [ ] Multi-language support
-- [ ] Advanced caching layer with Redis
-- [ ] API server with FastAPI
-- [ ] Web dashboard for monitoring
-- [ ] Custom entity definitions
-- [ ] Webhook notification support
+1. Create `src/sources/my_source.py` implementing `HeadlineSource` (connect / disconnect / stream_headlines / is_connected)
+2. Add a new `elif args.source == 'mysource':` branch in `services/kafka_producer/run_producer.py`
+3. Add any config it needs to `config.ini` and `src/config/loader.py`
+
+The analyzer, SSE server, and everything downstream needs no changes.

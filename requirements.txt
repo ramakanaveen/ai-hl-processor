@@ -13,13 +13,21 @@ google-cloud-aiplatform>=1.38.0
 # Data Validation
 pydantic>=2.0.0
 
-# Feed Adapters - RSS and WebSocket support
+# Feed Adapters
 websockets>=12.0
 feedparser>=6.0.10
 pyyaml>=6.0
 
-# Future feed adapters (optional)
-# aiokafka>=0.10.0
+# Kafka
+aiokafka>=0.11.0
+
+# KDB+ (optional — only needed when using KDBSource)
+qpython>=2.0.0
+
+# SSE Server
+fastapi>=0.111.0
+sse-starlette>=1.8.0
+uvicorn[standard]>=0.29.0
 
 # Testing
 pytest>=7.4.0

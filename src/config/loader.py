@@ -193,38 +193,37 @@ class ConfigLoader:
         }
 
     def get_feed_config(self) -> Dict[str, Any]:
-        """Get feed configuration for WebSocket and Kafka"""
+        """Get Kafka and file-source feed configuration."""
         return {
-            # WebSocket URLs for RSS-to-analyzer pipeline
-            'input_websocket_url': self._get_value(
-                "feeds", "input_websocket_url", "ws://localhost:8765"
-            ),
-            'output_websocket_url': self._get_value(
-                "feeds", "output_websocket_url", "ws://localhost:8766"
-            ),
-            'stream_max_queue_size': self._get_value(
-                "feeds", "stream_max_queue_size", 100, int
-            ),
-            'stream_max_concurrent_processing': self._get_value(
-                "feeds", "stream_max_concurrent_processing", 5, int
-            ),
-            'stream_reconnect_interval_seconds': self._get_value(
-                "feeds", "stream_reconnect_interval_seconds", 5, int
-            ),
-            # Legacy WebSocket URL
-            'websocket_url': self._get_value(
-                "feeds", "websocket_url", "ws://localhost:8080/headlines"
-            ),
-            # Kafka configuration
             'kafka_bootstrap_servers': self._get_value(
                 "feeds", "kafka_bootstrap_servers", "localhost:9092"
             ),
-            'kafka_topic': self._get_value(
-                "feeds", "kafka_topic", "financial-headlines"
+            'kafka_input_topic': self._get_value(
+                "feeds", "kafka_input_topic", "raw-headlines"
             ),
-            'kafka_group_id': self._get_value(
-                "feeds", "kafka_group_id", "headline-analyzer"
+            'kafka_output_topic': self._get_value(
+                "feeds", "kafka_output_topic", "headline-impacts"
             ),
+            'kafka_consumer_group': self._get_value(
+                "feeds", "kafka_consumer_group", "hl-analyzer"
+            ),
+            'kafka_sse_consumer_group': self._get_value(
+                "feeds", "kafka_sse_consumer_group", "sse-server"
+            ),
+            'file_source_rate_per_second': self._get_value(
+                "feeds", "file_source_rate_per_second", 1.0, float
+            ),
+        }
+
+    def get_kdb_config(self) -> Dict[str, Any]:
+        """Get KDB+ source configuration."""
+        return {
+            'host': os.getenv("KDB_HOST", self._get_value("kdb", "host", "localhost")),
+            'port': int(os.getenv("KDB_PORT", str(self._get_value("kdb", "port", 5000, int)))),
+            'query': self._get_value("kdb", "query", "select text, source, time from headlines where date=.z.d"),
+            'poll_interval_seconds': self._get_value("kdb", "poll_interval_seconds", 60, int),
+            'username': os.getenv("KDB_USERNAME", self._get_value("kdb", "username", None)) or None,
+            'password': os.getenv("KDB_PASSWORD", self._get_value("kdb", "password", None)) or None,
         }
 
     def get_all_config(self) -> Dict[str, Any]:
