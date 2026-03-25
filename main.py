@@ -37,15 +37,13 @@ async def main():
     parser.add_argument('--demo', action='store_true', help='Run demo with sample headlines')
     parser.add_argument('--stream', action='store_true', help='Stream from Kafka raw-headlines topic')
     parser.add_argument('--json', action='store_true', help='Output results as JSON')
-    parser.add_argument('--memory-path', type=str, default='memory_store',
-                        help='Path to file system memory storage')
 
     args = parser.parse_args()
 
     config = get_config(environment=args.environment)
     logger.info(f"Loaded config for environment: {config.environment}")
 
-    memory = FileSystemMemory(base_path=args.memory_path)
+    memory = FileSystemMemory(base_path='memory_store')
     mem_stats = memory.get_stats()
     logger.info(f"Memory store: {mem_stats['total_analyses']} analyses at {args.memory_path}")
 

@@ -51,6 +51,9 @@ memory_store/
 logs/
 data/
 
+# IDE
+*.iml
+
 # Test Files
 .pytest_cache/
 .coverage
