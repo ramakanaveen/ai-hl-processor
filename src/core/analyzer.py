@@ -18,12 +18,14 @@ class HeadlineImpactAnalyzer:
         agent_executor,  # LangChain AgentExecutor
         memory: FileSystemMemory,
         feed_adapter=None,
-        config=None
+        config=None,
+        redis_store=None,
     ):
         self.agent = agent_executor
         self.memory = memory
         self.feed_adapter = feed_adapter
         self.config = config
+        self.redis_store = redis_store
 
         # Performance tracking
         self.stats = {
@@ -81,6 +83,11 @@ class HeadlineImpactAnalyzer:
             # Store in memory for future reference
             self.memory.store_analysis(result)
             logger.info(f"Stored analysis in memory: {len(impacted_entities)} entities impacted")
+
+            # Store in Redis cache and impact timeline (best-effort)
+            if self.redis_store and await self.redis_store.is_available():
+                await self.redis_store.cache_result(result)
+                await self.redis_store.store_impact_timeline(result)
 
             return result
 

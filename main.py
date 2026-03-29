@@ -45,10 +45,28 @@ async def main():
 
     memory = FileSystemMemory(base_path='memory_store')
     mem_stats = memory.get_stats()
-    logger.info(f"Memory store: {mem_stats['total_analyses']} analyses at {args.memory_path}")
+    logger.info(f"Memory store: {mem_stats['total_analyses']} analyses at memory_store/")
 
-    agent = create_analysis_agent(config, memory)
-    analyzer = HeadlineImpactAnalyzer(agent, memory, None, config)
+    from src.memory.redis_store import RedisImpactStore
+    cache_cfg = config.get_cache_config()
+    redis_cfg = config.get_redis_config()
+    redis_store = RedisImpactStore(
+        host=cache_cfg['redis_host'],
+        port=cache_cfg['redis_port'],
+        db=cache_cfg['redis_db'],
+        ttl_seconds=cache_cfg['cache_ttl_seconds'],
+        active_window_minutes=redis_cfg['active_impact_window_minutes'],
+        password=redis_cfg['password'],
+        ssl=redis_cfg['ssl'],
+        ssl_cert_reqs=redis_cfg['ssl_cert_reqs'],
+        socket_timeout=redis_cfg['socket_timeout'],
+        socket_connect_timeout=redis_cfg['socket_connect_timeout'],
+        max_connections=redis_cfg['max_connections'],
+    )
+    await redis_store.connect()
+
+    agent = create_analysis_agent(config, memory, redis_store=redis_store)
+    analyzer = HeadlineImpactAnalyzer(agent, memory, None, config, redis_store=redis_store)
 
     if args.analyze:
         result = await analyzer.analyze_headline(args.analyze)
@@ -140,9 +158,11 @@ async def main():
 
         finally:
             await producer.stop()
+            await redis_store.close()
 
     else:
         parser.print_help()
+        await redis_store.close()
 
 
 if __name__ == "__main__":

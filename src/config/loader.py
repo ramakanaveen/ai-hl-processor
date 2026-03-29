@@ -174,13 +174,24 @@ class ConfigLoader:
         }
 
     def get_cache_config(self) -> Dict[str, Any]:
-        """Get cache configuration"""
+        """Get Redis connection configuration."""
         return {
             'redis_host': os.getenv("REDIS_HOST", self._get_value("cache", "redis_host", "localhost")),
             'redis_port': int(os.getenv("REDIS_PORT", str(self._get_value("cache", "redis_port", 6379, int)))),
             'redis_db': self._get_value("cache", "redis_db", 0, int),
-            'cache_ttl_seconds': self._get_value("cache", "cache_ttl_seconds", 300, int),
-            'max_memory_mb': self._get_value("cache", "max_memory_mb", 512, int)
+            'cache_ttl_seconds': self._get_value("cache", "cache_ttl_seconds", 86400, int),
+        }
+
+    def get_redis_config(self) -> Dict[str, Any]:
+        """Get Redis behaviour and enterprise settings."""
+        return {
+            'active_impact_window_minutes': self._get_value("cache", "active_impact_window_minutes", 60, int),
+            'password': os.getenv("REDIS_PASSWORD", self._get_value("cache", "redis_password", None)) or None,
+            'ssl': os.getenv("REDIS_SSL", self._get_value("cache", "redis_ssl", "false")).lower() == "true",
+            'ssl_cert_reqs': os.getenv("REDIS_SSL_CERT_REQS", self._get_value("cache", "redis_ssl_cert_reqs", "required")),
+            'socket_timeout': int(os.getenv("REDIS_SOCKET_TIMEOUT", str(self._get_value("cache", "redis_socket_timeout", 5, int)))),
+            'socket_connect_timeout': int(os.getenv("REDIS_SOCKET_CONNECT_TIMEOUT", str(self._get_value("cache", "redis_socket_connect_timeout", 5, int)))),
+            'max_connections': int(os.getenv("REDIS_MAX_CONNECTIONS", str(self._get_value("cache", "redis_max_connections", 10, int)))),
         }
 
     def get_google_cloud_config(self) -> Dict[str, Any]:
