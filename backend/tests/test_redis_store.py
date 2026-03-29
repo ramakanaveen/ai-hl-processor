@@ -141,6 +141,23 @@ async def test_idempotent_store(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_replace_result_updates_timeline_members(monkeypatch):
+    store = await _patched_store(monkeypatch)
+    original = _make_result("Fed raises rates", currencies=["USD"])
+    corrected = _make_result("Fed raises rates", currencies=["EUR"])
+    corrected.is_corrected = True
+
+    await store.store_impact_timeline(original)
+    await store.replace_result(corrected)
+
+    entries = await store.get_active_impacts(window_minutes=60)
+    currencies = {e.currency for e in entries if e.headline == "Fed raises rates"}
+
+    assert "USD" not in currencies
+    assert "EUR" in currencies
+
+
+@pytest.mark.asyncio
 async def test_is_available_false_when_no_connection():
     """A store that was never connected should report unavailable."""
     store = RedisImpactStore(host="127.0.0.1", port=19999)

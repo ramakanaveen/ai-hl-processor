@@ -206,6 +206,27 @@ class RedisImpactStore:
         except Exception as e:
             logger.error(f"Redis store_impact_timeline error: {e}")
 
+    async def replace_result(self, result) -> None:
+        """
+        Replace the canonical Redis view for a headline after a user correction.
+        This removes any prior impact graph entries for the headline before
+        writing the corrected result back into the cache and timelines.
+        """
+        try:
+            headline_hash = self._headline_hash(result.headline)
+            pipe = self._redis.pipeline()
+
+            for ccy in _CURRENCIES:
+                member = f"{headline_hash}:{ccy}"
+                pipe.zrem(self._timeline_key(ccy), member)
+                pipe.delete(self._impact_key(headline_hash, ccy))
+
+            await pipe.execute()
+            await self.cache_result(result)
+            await self.store_impact_timeline(result)
+        except Exception as e:
+            logger.error(f"Redis replace_result error: {e}")
+
     async def get_active_impacts(self, window_minutes: Optional[int] = None) -> List[ActiveImpactEntry]:
         """
         Return all impact events across all currencies within the time window.
@@ -236,3 +257,62 @@ class RedisImpactStore:
             logger.error(f"Redis get_active_impacts error: {e}")
 
         return entries
+
+    # ------------------------------------------------------------------
+    # User corrections  (no TTL — permanent training signal)
+    # ------------------------------------------------------------------
+
+    def _correction_key(self, headline_hash: str) -> str:
+        return f"hl:correction:{headline_hash}"
+
+    async def store_correction(
+        self,
+        headline: str,
+        original_entities: list,
+        corrected_entities: list,
+        note: str = "",
+        corrected_by: str = "user",
+    ) -> None:
+        """Store a user correction permanently."""
+        try:
+            h = self._headline_hash(headline)
+            key = self._correction_key(h)
+            pipe = self._redis.pipeline()
+            pipe.hset(key, mapping={
+                "headline": headline,
+                "original_entities": json.dumps(original_entities, default=str),
+                "corrected_entities": json.dumps(corrected_entities, default=str),
+                "correction_note": note,
+                "corrected_by": corrected_by,
+                "corrected_at": datetime.now().isoformat(),
+            })
+            pipe.zadd("hl:corrections:index", {h: time.time()})
+            await pipe.execute()
+        except Exception as e:
+            logger.error(f"Redis store_correction error: {e}")
+
+    async def get_correction(self, headline: str) -> Optional[dict]:
+        """Retrieve a correction by headline text."""
+        try:
+            return await self.get_correction_by_hash(self._headline_hash(headline))
+        except Exception as e:
+            logger.error(f"Redis get_correction error: {e}")
+            return None
+
+    async def get_correction_by_hash(self, headline_hash: str) -> Optional[dict]:
+        """Retrieve a correction by SHA-256 hash."""
+        try:
+            data = await self._redis.hgetall(self._correction_key(headline_hash))
+            if not data:
+                return None
+            return {
+                "headline": data.get("headline", ""),
+                "original_entities": json.loads(data.get("original_entities", "[]")),
+                "corrected_entities": json.loads(data.get("corrected_entities", "[]")),
+                "correction_note": data.get("correction_note", ""),
+                "corrected_by": data.get("corrected_by", "user"),
+                "corrected_at": data.get("corrected_at", ""),
+            }
+        except Exception as e:
+            logger.error(f"Redis get_correction_by_hash error: {e}")
+            return None

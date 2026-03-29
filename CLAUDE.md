@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Real-time semantic analysis system that assesses financial news headline impact on currency markets using Google Gemini Flash (via Vertex AI) with a LangChain agent framework, file-system memory for pattern learning, and a Redis-backed currency impact graph.
 
+User corrections are canonical. If a headline result is edited, the corrected result is the source of truth for history rendering and future analysis context.
+
 ## Project Structure
 
 ```
@@ -68,9 +70,14 @@ npm run dev      # → http://localhost:5173
 npm run build    # production build → frontend/dist/
 ```
 
+Frontend dev-server note:
+
+- `frontend/vite.config.js` proxies `/api`, `/events`, and `/health` to `http://localhost:8080`
+- if you run the SSE/API server on another port, update the proxy or the UI will talk to the wrong backend
+
 ## Environment Configuration
 
-Set `ENV` in `backend/.env` to one of: `test`, `dev`, `uat`, `prod`
+The code reads `ENV` when no command-line environment is provided. In practice, prefer passing `--environment` explicitly for backend commands.
 
 | ENV  | LLM Provider | Notes |
 |------|-------------|-------|
@@ -120,6 +127,23 @@ HeadlineSource (CSV/KDB+)
 ### Memory Store
 
 `backend/memory_store/` — JSON files persisted between runs (analyses, patterns, metrics, corrections).
+
+## Current UI Behavior
+
+- `Live Feed` is a timestamp-based review surface for fresh headlines and shows reasoning expanded by default.
+- `History` is the stable canonical record and should not be hidden just because an item is also active in live feed.
+- History items may be marked `Live` or `Edited`, but should remain visible.
+
+## Current Correction Behavior
+
+- `POST /api/corrections` updates the canonical stored analysis and returns the corrected result.
+- The SSE server broadcasts `analysis_corrected` so connected clients can update existing cards.
+- Future prompt enrichment should use corrected canonical results, not stale original model outputs.
+
+## Design Notes
+
+- `HEADLINE_EVENT_HANDLING.md` — intended event-handling and duplicate policy direction
+- `KNOWLEDGE_GRAPH_DESIGN.md` — fast loop / slow loop and knowledge-graph design
 
 ## Testing
 

@@ -77,7 +77,8 @@ class HeadlineImpactAnalyzer:
                 timestamp=datetime.now(),
                 impacted_entities=impacted_entities,
                 processing_time_ms=round(processing_time_ms, 2),
-                model_used=self.config.model_config.model_name if self.config else "unknown"
+                model_used=self.config.model_config.model_name if self.config else "unknown",
+                last_modified_at=datetime.now(),
             )
 
             # Store in memory for future reference
@@ -102,7 +103,8 @@ class HeadlineImpactAnalyzer:
                 impacted_entities=[],
                 processing_time_ms=round(processing_time_ms, 2),
                 model_used="error",
-                error=str(e)
+                error=str(e),
+                last_modified_at=datetime.now(),
             )
 
             # Still store even errors for tracking

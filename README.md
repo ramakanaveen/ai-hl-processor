@@ -2,6 +2,8 @@
 
 Analyses financial news headlines in real-time and predicts which currency pairs are impacted, with confidence scores and reasoning. Uses Google Gemini Flash (via Vertex AI) with a memory-enhanced LangChain agent.
 
+Corrections made by users are treated as canonical results. The corrected version is what history renders and what future analysis should use as source-of-truth context.
+
 ---
 
 ## How it works
@@ -74,6 +76,8 @@ Consumes `raw-headlines` → runs LLM → publishes to `headline-impacts`.
 python3 services/sse_server/run_sse.py --environment dev --port 8080
 ```
 
+The frontend dev server proxies `/api`, `/events`, and `/health` to port `8080` by default. If you change the SSE/API port, update [frontend/vite.config.js](/Users/naveenramaka/naveen/ai-hl-processor/frontend/vite.config.js) or keep the backend on `8080`.
+
 ### 4. Start a producer
 
 **From a CSV file** (`headline, source, timestamp` columns — timestamp optional):
@@ -107,6 +111,11 @@ data: {
   }
 }
 ```
+
+The React UI has two different views of the same canonical data:
+
+- `Live Feed` is a short review surface for newly arrived events. Reasoning is expanded by default there.
+- `History` is the permanent canonical record. Active live items can also appear in history and should be labeled, not hidden.
 
 ### Stop everything
 
@@ -209,6 +218,11 @@ scripts/
   stop_all.sh                   # stop all services
   health_check.sh               # check service status
 ```
+
+Additional design notes:
+
+- `HEADLINE_EVENT_HANDLING.md` — current intended behavior for live feed, history, duplicates, and canonical corrections
+- `KNOWLEDGE_GRAPH_DESIGN.md` — proposed fast/slow loop and knowledge-graph direction
 
 ---
 

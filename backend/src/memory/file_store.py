@@ -1,9 +1,8 @@
 import json
-import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional, Dict, Any
-from src.core.models import ImpactAnalysisResult
+from src.core.models import ImpactAnalysisResult, CurrencyImpact
 import hashlib
 
 
@@ -21,9 +20,10 @@ class FileSystemMemory:
         self.analyses_path = self.base_path / "analyses"
         self.patterns_path = self.base_path / "patterns"
         self.metrics_path = self.base_path / "metrics"
+        self.corrections_path = self.base_path / "corrections"
 
         # Create directories
-        for path in [self.analyses_path, self.patterns_path, self.metrics_path]:
+        for path in [self.analyses_path, self.patterns_path, self.metrics_path, self.corrections_path]:
             path.mkdir(parents=True, exist_ok=True)
 
     def store_analysis(self, result: ImpactAnalysisResult) -> str:
@@ -33,6 +33,9 @@ class FileSystemMemory:
         Returns:
             File path where analysis was stored
         """
+        if result.last_modified_at is None:
+            result.last_modified_at = result.timestamp
+
         # Generate unique ID from headline + timestamp
         analysis_id = hashlib.md5(
             f"{result.headline}{result.timestamp}".encode()
@@ -45,9 +48,53 @@ class FileSystemMemory:
 
         # Store as JSON
         with open(filepath, 'w') as f:
-            json.dump(result.dict(), f, indent=2, default=str)
+            json.dump(result.model_dump(), f, indent=2, default=str)
 
         return str(filepath)
+
+    @staticmethod
+    def _normalize_headline(headline: str) -> str:
+        return headline.lower().strip()
+
+    def _analysis_matches_headline(self, data: Dict[str, Any], headline: str) -> bool:
+        return self._normalize_headline(data.get('headline', '')) == self._normalize_headline(headline)
+
+    def apply_correction(
+        self,
+        headline: str,
+        corrected_entities: list,
+        note: str = "",
+        corrected_by: str = "user",
+    ) -> List[ImpactAnalysisResult]:
+        """
+        Rewrite all matching analyses so the corrected result becomes canonical.
+        Returns the updated analyses, newest first.
+        """
+        now = datetime.now(timezone.utc)
+        updated_results = []
+
+        for filepath in sorted(self.analyses_path.glob("*.json"), reverse=True):
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+
+            if not self._analysis_matches_headline(data, headline):
+                continue
+
+            data['impacted_entities'] = [
+                CurrencyImpact(**entity).model_dump() for entity in corrected_entities
+            ]
+            data['is_corrected'] = True
+            data['corrected_by'] = corrected_by
+            data['correction_note'] = note
+            data['last_modified_at'] = now.isoformat()
+            data['error'] = None
+
+            with open(filepath, 'w') as f:
+                json.dump(data, f, indent=2, default=str)
+
+            updated_results.append(ImpactAnalysisResult(**data))
+
+        return updated_results
 
     def search_similar_headlines(
         self,
@@ -138,3 +185,45 @@ class FileSystemMemory:
             with open(files[0], 'r') as f:
                 return json.load(f)['timestamp']
         return None
+
+    # ------------------------------------------------------------------
+    # User corrections  (permanent audit trail)
+    # ------------------------------------------------------------------
+
+    def store_correction(
+        self,
+        headline: str,
+        original_entities: list,
+        corrected_entities: list,
+        note: str = "",
+        corrected_by: str = "user",
+    ) -> str:
+        """Persist a user correction. Returns the file path written."""
+        h = hashlib.sha256(headline.lower().strip().encode()).hexdigest()[:12]
+        ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{ts_str}_{h}.json"
+        filepath = self.corrections_path / filename
+
+        payload = {
+            "headline": headline,
+            "original_entities": original_entities,
+            "corrected_entities": corrected_entities,
+            "correction_note": note,
+            "corrected_by": corrected_by,
+            "corrected_at": datetime.now().isoformat(),
+        }
+        with open(filepath, 'w') as f:
+            json.dump(payload, f, indent=2, default=str)
+        return str(filepath)
+
+    def get_correction_by_hash(self, headline_hash: str) -> Optional[Dict[str, Any]]:
+        """Find the most recent correction file whose name starts with the given hash prefix."""
+        matches = sorted(
+            [fp for fp in self.corrections_path.glob("*.json")
+             if headline_hash in fp.stem],
+            reverse=True
+        )
+        if not matches:
+            return None
+        with open(matches[0], 'r') as f:
+            return json.load(f)

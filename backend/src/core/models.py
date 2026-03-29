@@ -56,3 +56,7 @@ class ImpactAnalysisResult(BaseModel):
     processing_time_ms: float
     model_used: str
     error: Optional[str] = None
+    is_corrected: bool = False
+    corrected_by: Optional[str] = None
+    correction_note: str = ""
+    last_modified_at: Optional[datetime] = None
