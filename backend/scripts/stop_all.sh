@@ -22,11 +22,9 @@ stop_process() {
 
 echo "Stopping services..."
 
-stop_process "run_input_server.py" "Input WebSocket Server"
-stop_process "run_output_server.py" "Output WebSocket Server"
-stop_process "run_poller.py" "RSS Feed Poller"
+stop_process "run_sse.py" "SSE Server"
+stop_process "run_producer.py" "Kafka Producer"
 stop_process "main.py --stream" "Analyzer (stream mode)"
-stop_process "run_writer.py" "File Writer Service"
 
 echo ""
 echo "========================================="

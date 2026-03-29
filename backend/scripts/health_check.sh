@@ -27,19 +27,13 @@ echo ""
 
 all_running=0
 
-check_process "run_input_server.py" "Input WebSocket Server (port 8765)"
+check_process "run_sse.py" "SSE Server (port 8080)"
 all_running=$((all_running + $?))
 
-check_process "run_output_server.py" "Output WebSocket Server (port 8766)"
-all_running=$((all_running + $?))
-
-check_process "run_poller.py" "RSS Feed Poller"
+check_process "run_producer.py" "Kafka Producer"
 all_running=$((all_running + $?))
 
 check_process "main.py --stream" "Analyzer (stream mode)"
-all_running=$((all_running + $?))
-
-check_process "run_writer.py" "File Writer Service"
 all_running=$((all_running + $?))
 
 echo ""
@@ -50,33 +44,22 @@ if [ $all_running -eq 0 ]; then
     echo "========================================="
     echo ""
 
-    # Show recent log entries
-    echo "Recent activity (last 5 lines from each log):"
+    # HTTP health check on SSE server
+    echo "SSE Server health endpoint:"
+    curl -s http://localhost:8080/health 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "  (not reachable)"
     echo ""
 
-    if [ -f "logs/input_ws.log" ]; then
-        echo "Input WebSocket:"
-        tail -n 3 logs/input_ws.log | sed 's/^/  /'
-        echo ""
-    fi
+    # Show recent log entries
+    echo "Recent activity (last 3 lines from each log):"
+    echo ""
 
-    if [ -f "logs/rss_poller.log" ]; then
-        echo "RSS Poller:"
-        tail -n 3 logs/rss_poller.log | sed 's/^/  /'
-        echo ""
-    fi
-
-    if [ -f "logs/analyzer.log" ]; then
-        echo "Analyzer:"
-        tail -n 3 logs/analyzer.log | sed 's/^/  /'
-        echo ""
-    fi
-
-    if [ -f "logs/file_writer.log" ]; then
-        echo "File Writer:"
-        tail -n 3 logs/file_writer.log | sed 's/^/  /'
-        echo ""
-    fi
+    for log in logs/analyzer.log logs/sse_server.log logs/producer.log; do
+        if [ -f "$log" ]; then
+            echo "$(basename $log .log):"
+            tail -n 3 "$log" | sed 's/^/  /'
+            echo ""
+        fi
+    done
 else
     echo "Status: Some services not running ✗"
     echo "========================================="
