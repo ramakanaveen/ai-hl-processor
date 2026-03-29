@@ -1,0 +1,14 @@
+{
+  "headline": "One person dead and 300 buildings destroyed in Australia bushfires",
+  "timestamp": "2026-01-13 19:54:05.138249",
+  "impacted_entities": [
+    {
+      "currency": "AUD",
+      "confidence": 0.6,
+      "reasoning": "The bushfires represent a significant natural disaster impacting Australia's economy through property destruction and potential disruption to economic activity. This negative economic event is likely to weigh on the Australian Dollar."
+    }
+  ],
+  "processing_time_ms": 782.28,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

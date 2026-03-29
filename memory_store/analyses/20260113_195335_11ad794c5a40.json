@@ -1,0 +1,8 @@
+{
+  "headline": "We choose Denmark over US, Greenland's PM says",
+  "timestamp": "2026-01-13 19:53:35.983752",
+  "impacted_entities": [],
+  "processing_time_ms": 1010.28,
+  "model_used": "error",
+  "error": "1 validation error for CurrencyImpact\ncurrency\n  Input should be 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'NZD' or 'CNY' [type=enum, input_value='DKK', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/enum"
+}

@@ -1,0 +1,14 @@
+{
+  "headline": "White homeowner accused of shooting a Black teen who rang his doorbell turns himself in to face criminal charges",
+  "timestamp": "2026-01-13 19:54:39.401931",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "While the headline describes a domestic event, significant social unrest or legal developments in the US can sometimes lead to shifts in market sentiment and impact the US Dollar, especially if it raises broader concerns about stability or risk."
+    }
+  ],
+  "processing_time_ms": 896.31,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

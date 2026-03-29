@@ -1,0 +1,14 @@
+{
+  "headline": "Toddler crawls through White House fence, prompts Secret Service response",
+  "timestamp": "2026-01-13 19:54:56.365186",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.55,
+      "reasoning": "While the event itself is minor and unlikely to have a significant economic impact, the mention of the White House and Secret Service, which are intrinsically linked to US governance and security, could lead to a very marginal, sentiment-driven reaction in the USD. However, the confidence is low due to the non-economic nature of the headline."
+    }
+  ],
+  "processing_time_ms": 15846.71,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

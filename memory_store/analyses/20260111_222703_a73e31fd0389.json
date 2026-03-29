@@ -1,0 +1,8 @@
+{
+  "headline": "Bank of England raises rates",
+  "timestamp": "2026-01-11 22:27:03.108622",
+  "impacted_entities": [],
+  "processing_time_ms": 0.01,
+  "model_used": "gemini-flash-lite-latest",
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "headline": "Millions in the US could face massive consequences unless McCarthy can navigate out of a debt trap he set for Biden",
+  "timestamp": "2026-01-13 19:54:38.498258",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.95,
+      "reasoning": "The headline directly mentions the US and its political figures (McCarthy, Biden) in the context of a debt trap. This implies significant fiscal and political uncertainty within the United States, which will directly impact the US Dollar. Concerns about US debt levels and potential government shutdowns or defaults are classic drivers of USD volatility."
+    }
+  ],
+  "processing_time_ms": 7616.52,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

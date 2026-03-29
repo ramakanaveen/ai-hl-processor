@@ -1,0 +1,14 @@
+{
+  "headline": "Trump to meet Venezuelan opposition leader Machado at the White House",
+  "timestamp": "2026-01-13 19:53:53.701542",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "The meeting involves the US President and takes place at the White House, suggesting potential US policy shifts or statements that could influence the USD. While Venezuela's economic situation is dire, direct impact on major currencies is unlikely unless it signals broader geopolitical shifts affecting US foreign policy or regional stability."
+    }
+  ],
+  "processing_time_ms": 894.96,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

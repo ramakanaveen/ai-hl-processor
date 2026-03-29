@@ -1,0 +1,14 @@
+{
+  "headline": "McCarthy slams Biden in handling of US debt",
+  "timestamp": "2026-01-13 19:55:13.570335",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.9,
+      "reasoning": "The headline directly mentions 'US debt' and 'Biden', the President of the United States. Political rhetoric surrounding US debt ceiling issues can significantly impact market sentiment and investor confidence in the US dollar, potentially leading to volatility."
+    }
+  ],
+  "processing_time_ms": 809.32,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

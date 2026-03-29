@@ -1,0 +1,14 @@
+{
+  "headline": "Bank of Japan intervenes in currency markets for first time since 1998",
+  "timestamp": "2026-01-11 22:34:00.778936",
+  "impacted_entities": [
+    {
+      "currency": "JPY",
+      "confidence": 0.8,
+      "reasoning": "Mock: Japan/BOJ-related keywords detected"
+    }
+  ],
+  "processing_time_ms": 0.01,
+  "model_used": "gemini-flash-lite-latest",
+  "error": null
+}

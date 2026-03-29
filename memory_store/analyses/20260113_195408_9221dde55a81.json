@@ -1,0 +1,29 @@
+{
+  "headline": "Lyse Doucet: Iran's rulers face biggest challenge since 1979 revolution",
+  "timestamp": "2026-01-13 19:54:08.498066",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "Geopolitical instability in Iran can lead to increased oil prices and potential safe-haven flows into the USD, especially if tensions escalate regionally."
+    },
+    {
+      "currency": "EUR",
+      "confidence": 0.55,
+      "reasoning": "European economies are sensitive to oil price fluctuations and regional instability in the Middle East, which could indirectly impact the EUR through trade and energy costs."
+    },
+    {
+      "currency": "JPY",
+      "confidence": 0.5,
+      "reasoning": "Significant geopolitical turmoil in the Middle East can trigger safe-haven demand for the JPY."
+    },
+    {
+      "currency": "CHF",
+      "confidence": 0.5,
+      "reasoning": "As a traditional safe-haven currency, the CHF may see increased demand during periods of heightened geopolitical risk."
+    }
+  ],
+  "processing_time_ms": 1276.28,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

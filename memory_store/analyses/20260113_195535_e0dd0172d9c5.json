@@ -1,0 +1,14 @@
+{
+  "headline": "FDA clears the way for additional bivalent boosters for certain vulnerable individuals",
+  "timestamp": "2026-01-13 19:55:35.792187",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "FDA approval is a US-specific regulatory event. While the direct economic impact might be limited, positive news related to public health can sometimes contribute to broader market sentiment, which can indirectly affect the USD. However, the impact is likely to be marginal."
+    }
+  ],
+  "processing_time_ms": 1014.65,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

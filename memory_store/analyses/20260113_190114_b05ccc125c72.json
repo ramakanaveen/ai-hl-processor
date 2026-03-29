@@ -1,0 +1,14 @@
+{
+  "headline": "Trump attacks Venezula and arrest president maduro",
+  "timestamp": "2026-01-13 19:01:14.449133",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "US sanctions and political involvement in Venezuela often lead to USD movements due to its role in international trade and finance. Increased geopolitical risk can also lead to safe-haven flows."
+    }
+  ],
+  "processing_time_ms": 1404.95,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

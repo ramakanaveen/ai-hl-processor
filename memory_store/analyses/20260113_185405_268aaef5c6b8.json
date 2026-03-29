@@ -1,0 +1,14 @@
+{
+  "headline": "Bank of Japan intervenes in currency markets for first time since 1998",
+  "timestamp": "2026-01-13 18:54:05.453255",
+  "impacted_entities": [
+    {
+      "currency": "JPY",
+      "confidence": 0.95,
+      "reasoning": "Direct intervention by the Bank of Japan in currency markets has a very high probability of impacting the Japanese Yen."
+    }
+  ],
+  "processing_time_ms": 782.4,
+  "model_used": "gemini-2.0-flash-exp",
+  "error": null
+}

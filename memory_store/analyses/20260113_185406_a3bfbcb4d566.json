@@ -1,0 +1,19 @@
+{
+  "headline": "China devalues yuan amid escalating trade tensions with US",
+  "timestamp": "2026-01-13 18:54:06.729125",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.9,
+      "reasoning": "Trade tensions with the US and direct mention in headline. Devaluation of the yuan impacts the USD due to the trade relationship between the two countries."
+    },
+    {
+      "currency": "CNY",
+      "confidence": 0.8,
+      "reasoning": "Direct mention of yuan devaluation in the headline. China-related keywords detected."
+    }
+  ],
+  "processing_time_ms": 1274.34,
+  "model_used": "gemini-2.0-flash-exp",
+  "error": null
+}

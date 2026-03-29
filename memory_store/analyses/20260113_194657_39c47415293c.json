@@ -1,0 +1,14 @@
+{
+  "headline": "Even when wives make as much as husbands, they still do more at home",
+  "timestamp": "2026-01-13 19:46:57.282204",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.9,
+      "reasoning": "Mock: US/Fed-related keywords detected"
+    }
+  ],
+  "processing_time_ms": 0.01,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

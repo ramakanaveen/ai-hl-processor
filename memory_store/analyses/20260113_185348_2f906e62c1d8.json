@@ -1,0 +1,14 @@
+{
+  "headline": "Bank of England raises interest rates",
+  "timestamp": "2026-01-13 18:53:48.887654",
+  "impacted_entities": [
+    {
+      "currency": "GBP",
+      "confidence": 0.95,
+      "reasoning": "The Bank of England's interest rate decision directly impacts the British pound. Higher interest rates typically lead to increased demand for the currency."
+    }
+  ],
+  "processing_time_ms": 1458.63,
+  "model_used": "gemini-2.0-flash-exp",
+  "error": null
+}

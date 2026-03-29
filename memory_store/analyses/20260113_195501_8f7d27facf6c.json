@@ -1,0 +1,14 @@
+{
+  "headline": "Democrats bash Justice Clarence Thomas but their plan to investigate ethics allegations is unclear",
+  "timestamp": "2026-01-13 19:55:01.513155",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "While the headline focuses on a domestic political event within the US, significant political uncertainty or perceived instability can sometimes lead to a slight negative sentiment towards the US Dollar, especially if it raises questions about the broader political landscape or future economic policy direction. However, the direct economic impact is likely to be minimal."
+    }
+  ],
+  "processing_time_ms": 824.22,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

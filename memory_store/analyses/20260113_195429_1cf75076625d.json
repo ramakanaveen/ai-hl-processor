@@ -1,0 +1,14 @@
+{
+  "headline": "Dominion still has pending lawsuits against election deniers such as Rudy Giuliani and Sidney Powell",
+  "timestamp": "2026-01-13 19:54:29.319498",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.6,
+      "reasoning": "The headline refers to US-based entities and individuals involved in legal proceedings within the United States. While not directly economic, significant legal battles involving prominent figures can sometimes influence market sentiment and indirectly affect the US Dollar, especially if they touch upon broader themes of political stability or regulatory scrutiny."
+    }
+  ],
+  "processing_time_ms": 6925.77,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}

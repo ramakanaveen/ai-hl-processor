@@ -1,0 +1,29 @@
+{
+  "headline": "World central bank chiefs 'stand in solidarity' with US Fed chair Powell",
+  "timestamp": "2026-01-13 19:53:44.687959",
+  "impacted_entities": [
+    {
+      "currency": "USD",
+      "confidence": 0.7,
+      "reasoning": "The headline directly mentions the US Federal Reserve chair, implying a focus on US monetary policy and its global implications. Statements of solidarity from other central banks can reinforce the perceived strength and direction of US monetary policy, indirectly supporting the USD."
+    },
+    {
+      "currency": "EUR",
+      "confidence": 0.55,
+      "reasoning": "As a major global currency and a significant trading partner with the US, the EUR is often influenced by coordinated central bank signals. Solidarity with the Fed could imply a shared approach to monetary policy, potentially affecting the EUR's relative value."
+    },
+    {
+      "currency": "JPY",
+      "confidence": 0.55,
+      "reasoning": "The Japanese Yen is a major global currency and often reacts to shifts in global monetary policy coordination. Solidarity with the Fed could signal a unified stance on inflation or economic growth, impacting the JPY's safe-haven status or yield differentials."
+    },
+    {
+      "currency": "CHF",
+      "confidence": 0.55,
+      "reasoning": "The Swiss Franc, like the JPY, is considered a safe-haven currency. Global central bank solidarity, especially with the US Fed, can influence risk sentiment and thus the demand for CHF."
+    }
+  ],
+  "processing_time_ms": 8701.62,
+  "model_used": "gemini-2.5-flash-lite",
+  "error": null
+}
