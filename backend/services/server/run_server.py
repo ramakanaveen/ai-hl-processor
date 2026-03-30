@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-SSE Server Entry Point
+Combined Headline Analysis + SSE Server — Entry Point
+
+Runs the analyzer and SSE/REST server in a single process.
 
 Usage:
-    python3 run_sse.py --environment uat --port 8080
+    python3 run_server.py --environment dev --port 8080
 """
 import os
 import sys
@@ -16,7 +18,9 @@ import uvicorn
 from src.config.loader import get_config
 from src.memory.redis_store import RedisImpactStore
 from src.memory.file_store import FileSystemMemory
-from services.sse_server.sse_server import create_app
+from src.llm.client_factory import create_analysis_agent
+from src.core.analyzer import HeadlineImpactAnalyzer
+from services.server.server import create_app
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,7 +28,7 @@ logging.basicConfig(
 )
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Headline Impact SSE Server")
+    parser = argparse.ArgumentParser(description="Headline Impact Server")
     parser.add_argument('--environment', '-e', default='dev',
                         choices=['test', 'dev', 'uat', 'prod'])
     parser.add_argument('--port', type=int, default=8080)
@@ -52,10 +56,15 @@ if __name__ == '__main__':
 
     file_store = FileSystemMemory(base_path='memory_store')
 
+    agent = create_analysis_agent(config, file_store, redis_store=redis_store)
+    analyzer = HeadlineImpactAnalyzer(agent, file_store, None, config, redis_store=redis_store)
+
     app = create_app(
         bootstrap_servers=feed_cfg['kafka_bootstrap_servers'],
-        topic=feed_cfg['kafka_output_topic'],
-        group_id=feed_cfg['kafka_sse_consumer_group'],
+        input_topic=feed_cfg['kafka_input_topic'],
+        output_topic=feed_cfg['kafka_output_topic'],
+        consumer_group=feed_cfg['kafka_consumer_group'],
+        analyzer=analyzer,
         redis_store=redis_store,
         file_store=file_store,
         environment=args.environment,

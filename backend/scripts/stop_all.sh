@@ -22,9 +22,8 @@ stop_process() {
 
 echo "Stopping services..."
 
-stop_process "run_sse.py" "SSE Server"
+stop_process "run_server.py" "Combined Server"
 stop_process "run_producer.py" "Kafka Producer"
-stop_process "main.py --stream" "Analyzer (stream mode)"
 
 echo ""
 echo "========================================="

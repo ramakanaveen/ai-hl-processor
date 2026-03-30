@@ -24,7 +24,7 @@ export function LiveFeed({
   onLiveWindowChange,
 }) {
   const { events, status } = useSSE('/events')
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)

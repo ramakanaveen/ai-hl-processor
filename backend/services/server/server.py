@@ -1,11 +1,15 @@
 """
-SSE Server + REST API
+Combined Headline Analysis + SSE Server
 
-Consumes the headline-impacts Kafka topic and streams every analysis result
-to connected clients via Server-Sent Events.
+Single process that:
+  1. Consumes raw-headlines from Kafka
+  2. Runs LLM impact analysis
+  3. Publishes results to headline-impacts Kafka topic (for external consumers)
+  4. Streams results directly to UI via SSE (no Kafka hop for internal clients)
+  5. Serves REST API (history, insights, stats, corrections)
 
-Each client gets its own asyncio.Queue so a slow client never blocks others.
-The Kafka consumer runs as a single background task shared across all clients.
+User corrections are republished to the output topic marked as
+type=analysis_corrected so external consumers receive the adjusted result.
 
 Endpoints:
     GET  /health                             — health check + connected client count
@@ -14,7 +18,7 @@ Endpoints:
     GET  /api/insights                       — active Redis currency impact graph
     GET  /api/stats                          — system metrics
     GET  /api/stats/throughput               — time-bucketed analysis counts
-    POST /api/corrections                    — save user correction
+    POST /api/corrections                    — save user correction + republish to Kafka
     GET  /api/corrections/{headline_hash}    — fetch existing correction
 """
 import asyncio
@@ -24,14 +28,13 @@ import logging
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Optional, Set
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ValidationError
 from sse_starlette.sse import EventSourceResponse
-from aiokafka import AIOKafkaConsumer
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 logger = logging.getLogger(__name__)
 
@@ -43,36 +46,67 @@ async def _broadcast_to_clients(message: dict):
     """Best-effort fan-out of a JSON-serializable message to all SSE clients."""
     if not _clients:
         return
-
     payload = json.dumps(message, default=str)
     for queue in list(_clients):
         await queue.put(payload)
 
 
 # ---------------------------------------------------------------------------
-# Kafka consumer loop
+# Analyzer loop — replaces the old Kafka consumer loop
 # ---------------------------------------------------------------------------
 
-async def _kafka_consumer_loop(bootstrap_servers: str, topic: str, group_id: str):
+async def _analyzer_loop(
+    bootstrap_servers: str,
+    input_topic: str,
+    output_topic: str,
+    consumer_group: str,
+    analyzer,
+    producer: AIOKafkaProducer,
+):
+    """
+    Consume raw-headlines, analyse each one, publish the result to the
+    output Kafka topic, and broadcast directly to connected SSE clients.
+    """
     consumer = AIOKafkaConsumer(
-        topic,
+        input_topic,
         bootstrap_servers=bootstrap_servers,
-        group_id=group_id,
+        group_id=consumer_group,
         auto_offset_reset="latest",
         value_deserializer=lambda b: json.loads(b.decode("utf-8")),
     )
     await consumer.start()
-    logger.info(f"SSE Kafka consumer started — topic={topic}")
+    logger.info(
+        f"Analyzer loop started — input={input_topic}, output={output_topic}"
+    )
 
     try:
         async for msg in consumer:
-            if _clients:
-                payload = json.dumps(msg.value, default=str)
-                for queue in list(_clients):
-                    await queue.put(payload)
+            payload = msg.value
+            data = payload.get("data", payload)
+            headline_text = (
+                data.get("text") or data.get("headline", "")
+            ).strip()
+            if not headline_text:
+                continue
+
+            result = await analyzer.analyze_headline(headline_text)
+
+            kafka_msg = {
+                "type": "analysis_result",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "data": result.model_dump(),
+            }
+            await producer.send(output_topic, kafka_msg)
+
+            await _broadcast_to_clients({
+                "type": "analysis_result",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "data": result.model_dump(),
+            })
+
     finally:
         await consumer.stop()
-        logger.info("SSE Kafka consumer stopped")
+        logger.info("Analyzer loop stopped")
 
 
 # ---------------------------------------------------------------------------
@@ -93,8 +127,10 @@ class CorrectionRequest(BaseModel):
 
 def create_app(
     bootstrap_servers: str,
-    topic: str,
-    group_id: str = "sse-server",
+    input_topic: str,
+    output_topic: str,
+    consumer_group: str,
+    analyzer,
     redis_store=None,
     file_store=None,
     environment: str = "dev",
@@ -104,19 +140,34 @@ def create_app(
     async def lifespan(app: FastAPI):
         if redis_store is not None:
             await redis_store.connect()
+
+        producer = AIOKafkaProducer(
+            bootstrap_servers=bootstrap_servers,
+            value_serializer=lambda v: json.dumps(v, default=str).encode("utf-8"),
+            acks="all",
+            enable_idempotence=True,
+        )
+        await producer.start()
+        app.state.kafka_producer = producer
+
         task = asyncio.create_task(
-            _kafka_consumer_loop(bootstrap_servers, topic, group_id)
+            _analyzer_loop(
+                bootstrap_servers, input_topic, output_topic,
+                consumer_group, analyzer, producer,
+            )
         )
         yield
+
         task.cancel()
         try:
             await task
         except asyncio.CancelledError:
             pass
+        await producer.stop()
         if redis_store is not None:
             await redis_store.close()
 
-    app = FastAPI(title="Headline Impact SSE Server", lifespan=lifespan)
+    app = FastAPI(title="Headline Impact Server", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,
@@ -130,8 +181,13 @@ def create_app(
     # -----------------------------------------------------------------------
 
     @app.get("/health")
+    @app.get("/api/health")
     async def health():
-        return {"status": "ok", "connected_clients": len(_clients)}
+        return {
+            "status": "ok",
+            "connected_clients": len(_clients),
+            "environment": environment,
+        }
 
     @app.get("/events")
     async def events(request: Request):
@@ -199,9 +255,11 @@ def create_app(
         for e in entries:
             ccy = e.currency
             if ccy not in grouped:
-                grouped[ccy] = {"currency": ccy, "events": [], "event_count": 0,
-                                 "max_confidence": 0.0, "avg_confidence": 0.0,
-                                 "latest_timestamp": ""}
+                grouped[ccy] = {
+                    "currency": ccy, "events": [], "event_count": 0,
+                    "max_confidence": 0.0, "avg_confidence": 0.0,
+                    "latest_timestamp": "",
+                }
             grouped[ccy]["events"].append({
                 "headline": e.headline,
                 "confidence": e.confidence,
@@ -216,11 +274,9 @@ def create_app(
             data["max_confidence"] = round(max(confs), 3)
             data["avg_confidence"] = round(sum(confs) / len(confs), 3)
             data["latest_timestamp"] = max(ev["timestamp"] for ev in data["events"])
-            # newest first within each currency
             data["events"].sort(key=lambda x: x["timestamp"], reverse=True)
             currencies.append(data)
 
-        # most active first
         currencies.sort(key=lambda x: (-x["event_count"], -x["max_confidence"]))
 
         return {"window_minutes": window_minutes, "currencies": currencies, "redis_available": True}
@@ -273,10 +329,9 @@ def create_app(
 
             counts: dict = {}
             for fp in file_store.analyses_path.glob("*.json"):
-                # filename format: YYYYMMDD_HHMMSS_<hash>.json
                 try:
-                    name = fp.stem  # e.g. 20260326_143000_abc123
-                    ts_str = "_".join(name.split("_")[:2])  # 20260326_143000
+                    name = fp.stem
+                    ts_str = "_".join(name.split("_")[:2])
                     dt = datetime.strptime(ts_str, "%Y%m%d_%H%M%S").replace(
                         tzinfo=timezone.utc
                     )
@@ -288,31 +343,32 @@ def create_app(
                 except Exception:
                     pass
 
-            buckets = [
-                {
-                    "bucket": datetime.fromtimestamp(k, tz=timezone.utc).isoformat(),
-                    "count": v,
-                }
-                for k, v in sorted(counts.items())
-            ]
-            return {"buckets": buckets}
+            return {
+                "buckets": [
+                    {
+                        "bucket": datetime.fromtimestamp(k, tz=timezone.utc).isoformat(),
+                        "count": v,
+                    }
+                    for k, v in sorted(counts.items())
+                ]
+            }
 
         return await asyncio.to_thread(_compute)
 
     # -----------------------------------------------------------------------
-    # Corrections
+    # Corrections — update canonical store, republish to Kafka, broadcast SSE
     # -----------------------------------------------------------------------
 
     @app.post("/api/corrections")
-    async def post_correction(body: CorrectionRequest):
+    async def post_correction(body: CorrectionRequest, request: Request):
         headline_hash = hashlib.sha256(
             body.headline.lower().strip().encode()
         ).hexdigest()
-        canonical_result = None
 
         if file_store is None:
             raise HTTPException(status_code=500, detail="Canonical file store is not configured")
 
+        # 1. Update canonical file store
         try:
             updated_results = await asyncio.to_thread(
                 file_store.apply_correction,
@@ -335,7 +391,7 @@ def create_app(
 
         canonical_result = updated_results[0]
 
-        # Redis primary
+        # 2. Update Redis
         if redis_store is not None and await redis_store.is_available():
             try:
                 await redis_store.replace_result(canonical_result)
@@ -349,7 +405,7 @@ def create_app(
             except Exception as e:
                 logger.error(f"Redis correction write failed: {e}")
 
-        # File audit trail (best effort once canonical result is updated)
+        # 3. File audit trail
         try:
             await asyncio.to_thread(
                 file_store.store_correction,
@@ -362,11 +418,23 @@ def create_app(
         except Exception as e:
             logger.error(f"File correction write failed: {e}")
 
-        await _broadcast_to_clients({
+        correction_payload = {
             "type": "analysis_corrected",
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "data": canonical_result.model_dump(),
-        })
+        }
+
+        # 4. Republish to Kafka so external consumers receive the adjusted result
+        producer: Optional[AIOKafkaProducer] = getattr(request.app.state, "kafka_producer", None)
+        if producer is not None:
+            try:
+                await producer.send(output_topic, correction_payload)
+                logger.info(f"Correction republished to {output_topic}: {body.headline[:60]}")
+            except Exception as e:
+                logger.error(f"Kafka correction republish failed: {e}")
+
+        # 5. Broadcast to connected SSE clients
+        await _broadcast_to_clients(correction_payload)
 
         return {
             "status": "saved",
@@ -381,7 +449,6 @@ def create_app(
             if data:
                 return data
 
-        # Fall back to file scan
         if file_store is not None:
             data = await asyncio.to_thread(
                 file_store.get_correction_by_hash, headline_hash

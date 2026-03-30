@@ -1,18 +1,20 @@
 import asyncio
 import hashlib
 from datetime import datetime
+from unittest.mock import AsyncMock
 
 import fakeredis.aioredis as fakeredis
 import pytest
 from fastapi.testclient import TestClient
 
-from services.sse_server import sse_server
+from services.server import server as sse_server
 from src.core.models import CurrencyImpact, ImpactAnalysisResult
 from src.memory.file_store import FileSystemMemory
 from src.memory.redis_store import RedisImpactStore
 
 
-async def _idle_consumer(*args, **kwargs):
+async def _idle_loop(*args, **kwargs):
+    """Stand-in for _analyzer_loop that does nothing."""
     try:
         await asyncio.Event().wait()
     except asyncio.CancelledError:
@@ -44,9 +46,15 @@ async def _patched_redis_store() -> RedisImpactStore:
     return store
 
 
+class _StubAnalyzer:
+    """Minimal stand-in so create_app doesn't need a real LLM."""
+    async def analyze_headline(self, text: str) -> ImpactAnalysisResult:
+        return _make_result(text)
+
+
 @pytest.fixture
 def app(tmp_path, monkeypatch):
-    monkeypatch.setattr(sse_server, "_kafka_consumer_loop", _idle_consumer)
+    monkeypatch.setattr(sse_server, "_analyzer_loop", _idle_loop)
 
     file_store = FileSystemMemory(base_path=str(tmp_path / "memory"))
     file_store.store_analysis(_make_result("Fed raises rates"))
@@ -55,7 +63,10 @@ def app(tmp_path, monkeypatch):
 
     app = sse_server.create_app(
         bootstrap_servers="localhost:9092",
-        topic="headline-impacts",
+        input_topic="raw-headlines",
+        output_topic="headline-impacts",
+        consumer_group="test-group",
+        analyzer=_StubAnalyzer(),
         redis_store=redis_store,
         file_store=file_store,
         environment="test",

@@ -2,7 +2,7 @@
 
 Analyses financial news headlines in real-time and predicts which currency pairs are impacted, with confidence scores and reasoning. Uses Google Gemini Flash (via Vertex AI) with a memory-enhanced LangChain agent.
 
-Corrections made by users are treated as canonical results. The corrected version is what history renders and what future analysis should use as source-of-truth context.
+Corrections made by users are treated as canonical results. The corrected version is what history renders, what future analysis uses as context, and what gets redistributed to external Kafka consumers.
 
 ---
 
@@ -13,29 +13,39 @@ Source (CSV file or KDB+)
     │  kafka_producer
     ▼
 Kafka: raw-headlines
-    │  main.py --stream
+    │  services/server/run_server.py
     ▼
-Gemini / Mock LLM  +  memory (past analyses)
+Gemini / Mock LLM  +  memory (past analyses)  +  Redis (impact graph)
     │
-    ▼
-Kafka: headline-impacts
-    │  sse_server
-    ▼
-GET /events  (SSE stream → UI / downstream consumers)
+    ├──▶  Kafka: headline-impacts   (external consumers + user corrections)
+    │
+    └──▶  GET /events               (SSE stream → UI)
+```
+
+User corrections flow:
+```
+UI  →  POST /api/corrections
+         ├──▶  file store (canonical truth)
+         ├──▶  Redis (impact graph updated)
+         ├──▶  Kafka: headline-impacts  (type=analysis_corrected)
+         └──▶  SSE /events              (UI updates in place)
 ```
 
 ---
 
 ## Setup
 
-**Requirements:** Python 3.11+, Docker Desktop
+**Requirements:** Python 3.11+, Docker Desktop, Node 18+
 
 ```bash
+cd backend
 pip3 install -r requirements.txt
-cp .env.example .env          # add Google Cloud credentials for uat/prod
+
+cd ../frontend
+npm install
 ```
 
-`.env` for UAT / prod:
+`.env` for UAT / prod (copy from `.env.example`):
 ```
 GOOGLE_CLOUD_PROJECT=your-project-id
 GOOGLE_CREDENTIALS_PATH=/path/to/service-account.json
@@ -50,6 +60,7 @@ For `dev` / `test` environments the LLM is mocked — no credentials needed.
 ### 1. Start Kafka
 
 ```bash
+cd backend
 docker compose up -d
 ```
 
@@ -62,23 +73,16 @@ docker exec kafka kafka-topics --create --if-not-exists \
   --bootstrap-server localhost:9092 --topic headline-impacts --partitions 3 --replication-factor 1
 ```
 
-### 2. Start the analyzer
+### 2. Start the combined server
 
 ```bash
-python3 main.py --stream --environment dev
+cd backend
+python3 services/server/run_server.py --environment dev --port 8080
 ```
 
-Consumes `raw-headlines` → runs LLM → publishes to `headline-impacts`.
+Single process that consumes `raw-headlines` → runs LLM analysis → publishes to `headline-impacts` → serves SSE + REST API on port 8080.
 
-### 3. Start the SSE server
-
-```bash
-python3 services/sse_server/run_sse.py --environment dev --port 8080
-```
-
-The frontend dev server proxies `/api`, `/events`, and `/health` to port `8080` by default. If you change the SSE/API port, update [frontend/vite.config.js](/Users/naveenramaka/naveen/ai-hl-processor/frontend/vite.config.js) or keep the backend on `8080`.
-
-### 4. Start a producer
+### 3. Start a producer
 
 **From a CSV file** (`headline, source, timestamp` columns — timestamp optional):
 ```bash
@@ -90,15 +94,24 @@ python3 services/kafka_producer/run_producer.py --source file --file data/headli
 python3 services/kafka_producer/run_producer.py --source kdb --environment uat
 ```
 
-### 5. Consume results
+### 4. Start the UI
+
+```bash
+cd frontend
+npm run dev    # → http://localhost:5173
+```
+
+The frontend dev server proxies `/api`, `/events`, and `/health` to port `8080`. If you run the backend on a different port, update `frontend/vite.config.js`.
+
+### 5. Consume results (external client)
 
 ```bash
 curl http://localhost:8080/events
 ```
 
-Each event:
+New analysis event:
 ```json
-data: {
+{
   "type": "analysis_result",
   "data": {
     "headline": "Federal Reserve raises rates by 75bps",
@@ -106,21 +119,36 @@ data: {
       {"currency": "USD", "confidence": 0.90, "reasoning": "..."},
       {"currency": "EUR", "confidence": 0.75, "reasoning": "..."}
     ],
+    "is_corrected": false,
     "processing_time_ms": 1240,
     "model_used": "gemini-2.5-flash-lite"
   }
 }
 ```
 
-The React UI has two different views of the same canonical data:
+User-corrected result (same headline, updated impacts):
+```json
+{
+  "type": "analysis_corrected",
+  "data": {
+    "headline": "Federal Reserve raises rates by 75bps",
+    "impacted_entities": [
+      {"currency": "USD", "confidence": 0.65, "reasoning": "..."},
+      {"currency": "AUD", "confidence": 0.70, "reasoning": "..."}
+    ],
+    "is_corrected": true,
+    "corrected_by": "reviewer",
+    "correction_note": "added AUD impact"
+  }
+}
+```
 
-- `Live Feed` is a short review surface for newly arrived events. Reasoning is expanded by default there.
-- `History` is the permanent canonical record. Active live items can also appear in history and should be labeled, not hidden.
+External consumers distinguish new analyses from corrections via the `type` field.
 
 ### Stop everything
 
 ```bash
-pkill -f "main.py --stream"; pkill -f "run_sse.py"; pkill -f "run_producer.py"
+pkill -f "run_server.py"; pkill -f "run_producer.py"
 docker compose down
 ```
 
@@ -129,8 +157,11 @@ docker compose down
 ## One-shot script
 
 ```bash
+cd backend
 ./scripts/start_all.sh dev data/headlines.csv   # file source
 ./scripts/start_all.sh uat                       # kdb source
+./scripts/stop_all.sh
+./scripts/health_check.sh
 ```
 
 ---
@@ -138,6 +169,8 @@ docker compose down
 ## One-off analysis (no Kafka needed)
 
 ```bash
+cd backend
+
 # Single headline
 python3 main.py --analyze "ECB cuts rates by 50bps" --environment dev
 
@@ -163,7 +196,7 @@ python3 main.py --demo --environment dev
 
 ## KDB+ configuration
 
-Edit `config.ini` or set env vars:
+Edit `backend/config.ini` or set env vars:
 
 ```ini
 [kdb]
@@ -180,48 +213,55 @@ Env var overrides: `KDB_HOST`, `KDB_PORT`, `KDB_USERNAME`, `KDB_PASSWORD`
 ## Project structure
 
 ```
-main.py                         # --analyze / --demo / --stream
-config.ini                      # all environment config
-docker-compose.yml              # local Kafka + Zookeeper
+backend/
+  main.py                         # --analyze / --demo (CLI testing only)
+  config.ini                      # all environment config
+  docker-compose.yml              # local Kafka + Zookeeper
 
-src/
-  config/loader.py              # typed config, get_feed_config(), get_kdb_config()
-  core/
-    models.py                   # Headline, CurrencyImpact, ImpactAnalysisResult
-    agent.py                    # LangChain agent (Gemini or mock)
-    analyzer.py                 # orchestrates agent + memory per headline
-  llm/
-    prompts.py                  # system + user prompts
-    client_factory.py           # returns correct agent for environment
-  memory/
-    file_store.py               # persists analyses, Jaccard similarity search
-    pattern_tracker.py          # event-currency pattern learning
-    tools.py                    # LangChain memory tools
-  feeds/
-    base.py                     # FeedAdapter ABC
-    kafka_adapter.py            # consumes raw-headlines → Headline objects
-  sources/
-    base.py                     # HeadlineSource ABC
-    file_source.py              # CSV, rate-limited (1/sec)
-    kdb_source.py               # qpython poll + SHA-256 dedup
+  src/
+    config/loader.py              # typed config dataclasses
+    core/
+      models.py                   # Headline, CurrencyImpact, ImpactAnalysisResult
+      agent.py                    # LangChain agent (Gemini or mock)
+      analyzer.py                 # orchestrates agent + memory per headline
+    llm/
+      prompts.py                  # system + user prompts
+      client_factory.py           # returns correct agent for environment
+    memory/
+      file_store.py               # persists analyses, Jaccard similarity search
+      redis_store.py              # Redis dedup cache + per-currency impact graph
+      pattern_tracker.py          # event-currency pattern learning
+    feeds/
+      kafka_adapter.py            # consumes raw-headlines → Headline objects
+    sources/
+      file_source.py              # CSV, rate-limited
+      kdb_source.py               # qpython poll + SHA-256 dedup
 
-services/
-  kafka_producer/
-    producer_service.py         # HeadlineSource → Kafka topic
-    run_producer.py             # entry point: --source file|kdb
-  sse_server/
-    sse_server.py               # FastAPI SSE, per-client queue fan-out
-    run_sse.py                  # entry point: uvicorn on --port
+  services/
+    server/
+      server.py                   # FastAPI: analyzer loop + SSE stream + REST API
+      run_server.py               # entry point: uvicorn on --port
+    kafka_producer/
+      producer_service.py         # HeadlineSource → Kafka topic
+      run_producer.py             # entry point: --source file|kdb
 
-scripts/
-  start_all.sh                  # start all services
-  stop_all.sh                   # stop all services
-  health_check.sh               # check service status
+  scripts/
+    start_all.sh                  # start Kafka + server + producer
+    stop_all.sh                   # stop all services
+    health_check.sh               # check service status + HTTP health
+
+frontend/
+  src/
+    components/                   # Dashboard, LiveFeed, History, Insights,
+                                  # Corrections, EndOfDay
+    hooks/                        # useSSE, usePolling
+    api/client.js                 # REST API calls
+  vite.config.js                  # proxies /api /events /health → :8080
 ```
 
 Additional design notes:
 
-- `HEADLINE_EVENT_HANDLING.md` — current intended behavior for live feed, history, duplicates, and canonical corrections
+- `HEADLINE_EVENT_HANDLING.md` — live feed, history, duplicates, and canonical correction behavior
 - `KNOWLEDGE_GRAPH_DESIGN.md` — proposed fast/slow loop and knowledge-graph direction
 
 ---

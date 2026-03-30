@@ -36,19 +36,13 @@ sleep 8
 echo "   Done"
 echo ""
 
-echo "2. Starting Analyzer (consuming raw-headlines → publishing headline-impacts)..."
-python3 main.py --stream --environment "$ENV" > logs/analyzer.log 2>&1 &
-ANALYZER_PID=$!
-echo "   Started (PID: $ANALYZER_PID)"
-sleep 2
-
-echo "3. Starting SSE Server (port 8080)..."
-cd services/sse_server
-python3 run_sse.py --environment "$ENV" --port 8080 > ../../logs/sse_server.log 2>&1 &
-SSE_PID=$!
-echo "   Started (PID: $SSE_PID)"
+echo "2. Starting Server (port 8080)..."
+cd services/server
+python3 run_server.py --environment "$ENV" --port 8080 > ../../logs/server.log 2>&1 &
+SERVER_PID=$!
+echo "   Started (PID: $SERVER_PID)"
 cd ../..
-sleep 1
+sleep 2
 
 echo "4. Starting Kafka Producer..."
 if [ -n "$CSV_FILE" ]; then
@@ -72,8 +66,7 @@ echo " All services started"
 echo "========================================="
 echo ""
 echo " Process IDs:"
-echo "   Analyzer:    $ANALYZER_PID"
-echo "   SSE Server:  $SSE_PID"
+echo "   Server:      $SERVER_PID"
 echo "   Producer:    $PRODUCER_PID"
 echo ""
 echo " Endpoints:"

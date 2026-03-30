@@ -17,7 +17,7 @@ ai-hl-processor/
 │   ├── requirements.txt
 │   ├── config.ini
 │   ├── src/          (config, core, feeds, llm, memory, sources)
-│   ├── services/     (kafka_producer, sse_server)
+│   ├── services/     (kafka_producer, server)
 │   ├── tests/
 │   ├── scripts/
 │   └── data/
@@ -43,11 +43,8 @@ python3 main.py --demo --environment dev
 # Run with real Gemini (requires Google Cloud credentials)
 python3 main.py --analyze "Fed raises rates" --environment uat --json
 
-# Stream mode (Kafka consumer → analyzer → Kafka producer)
-python3 main.py --stream --environment uat
-
-# SSE server (REST API + SSE stream on port 8080)
-python3 services/sse_server/run_sse.py --port 8080 --environment dev
+# Combined server (Kafka consumer + analyzer + SSE stream + REST API on port 8080)
+python3 services/server/run_server.py --port 8080 --environment dev
 
 # Kafka producer (feed headlines from file or KDB+)
 python3 services/kafka_producer/run_producer.py --source file --file data/headlines.csv
@@ -99,13 +96,14 @@ GOOGLE_CREDENTIALS_PATH=/path/to/service-account-key.json
 ```
 HeadlineSource (CSV/KDB+)
     → Kafka (raw-headlines)
-    → main.py --stream
-    → HeadlineImpactAnalyzer
-        → LangChain Agent (Gemini Flash or Mock)
-        → FileSystemMemory (Jaccard similarity, pattern learning)
-        → RedisImpactStore (dedup cache + per-currency impact graph)
-    → Kafka (headline-impacts)
-    → SSE Server (/events stream + /api/* REST endpoints)
+    → services/server/run_server.py (combined server)
+        → HeadlineImpactAnalyzer
+            → LangChain Agent (Gemini Flash or Mock)
+            → FileSystemMemory (Jaccard similarity, pattern learning)
+            → RedisImpactStore (dedup cache + per-currency impact graph)
+        → Kafka (headline-impacts)   ← republishes results + corrections
+        → SSE /events stream         ← direct fan-out to UI clients
+    → REST API (/api/* endpoints)
     → React UI (frontend/)
 ```
 
@@ -117,7 +115,7 @@ HeadlineSource (CSV/KDB+)
 - **`backend/src/memory/file_store.py`** — JSON file store for persistent analysis history
 - **`backend/src/memory/redis_store.py`** — Redis dedup cache + per-currency sorted-set impact graph
 - **`backend/src/memory/pattern_tracker.py`** — Learned keyword→currency correlation patterns
-- **`backend/services/sse_server/sse_server.py`** — FastAPI: SSE stream + REST API endpoints
+- **`backend/services/server/server.py`** — FastAPI: combined analyzer loop + SSE stream + REST API endpoints
 - **`backend/services/kafka_producer/`** — Source-agnostic headline publisher (file/KDB+)
 
 ### Configuration
