@@ -68,3 +68,7 @@ htmlcov/
 *.bak
 *.cache
 test_export.json
+# Relevance gate model artifacts (build outputs — regenerate with
+# `python3 backend/scripts/train_relevance.py`; pickles are sklearn-version specific)
+backend/models/relevance/*.joblib
+backend/models/relevance/metadata.json

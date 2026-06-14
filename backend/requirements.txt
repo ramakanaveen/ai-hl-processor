@@ -32,6 +32,10 @@ uvicorn[standard]>=0.29.0
 # Redis
 redis>=5.0.0
 
+# Relevance gate (pre-LLM ML filter) — fully offline, no model downloads
+scikit-learn>=1.3.0
+numpy>=1.24.0
+
 # Testing
 pytest>=7.4.0
 pytest-asyncio>=0.21.0

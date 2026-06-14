@@ -20,6 +20,7 @@ from src.memory.redis_store import RedisImpactStore
 from src.memory.file_store import FileSystemMemory
 from src.llm.client_factory import create_analysis_agent
 from src.core.analyzer import HeadlineImpactAnalyzer
+from src.relevance.filter import RelevanceFilter
 from services.server.server import create_app
 
 logging.basicConfig(
@@ -59,6 +60,12 @@ if __name__ == '__main__':
     agent = create_analysis_agent(config, file_store, redis_store=redis_store)
     analyzer = HeadlineImpactAnalyzer(agent, file_store, None, config, redis_store=redis_store)
 
+    # Pre-LLM relevance gate (optional). Built once here so the artifact loads
+    # before the event loop starts; runs in shadow or enforce mode per config.
+    rf_cfg = config.get_relevance_filter_config()
+    relevance_filter = RelevanceFilter(rf_cfg) if rf_cfg.enabled else None
+    relevance_mode = rf_cfg.mode if rf_cfg.enabled else "off"
+
     app = create_app(
         bootstrap_servers=feed_cfg['kafka_bootstrap_servers'],
         input_topic=feed_cfg['kafka_input_topic'],
@@ -68,6 +75,8 @@ if __name__ == '__main__':
         redis_store=redis_store,
         file_store=file_store,
         environment=args.environment,
+        relevance_filter=relevance_filter,
+        relevance_mode=relevance_mode,
     )
 
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")

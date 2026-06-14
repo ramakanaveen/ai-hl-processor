@@ -60,6 +60,19 @@ class BusinessConfig:
     analysis_window_hours: int
 
 
+@dataclass
+class RelevanceFilterConfig:
+    """Pre-LLM relevance gate configuration"""
+    enabled: bool
+    mode: str                 # "shadow" | "enforce"
+    model_path: str
+    encoder: str
+    drop_threshold: float
+    pass_threshold: float
+    allowlist_terms: List[str]
+    min_training_samples: int
+
+
 class ConfigLoader:
     """Loads configuration from config.ini file"""
 
@@ -193,6 +206,26 @@ class ConfigLoader:
             'socket_connect_timeout': int(os.getenv("REDIS_SOCKET_CONNECT_TIMEOUT", str(self._get_value("cache", "redis_socket_connect_timeout", 5, int)))),
             'max_connections': int(os.getenv("REDIS_MAX_CONNECTIONS", str(self._get_value("cache", "redis_max_connections", 10, int)))),
         }
+
+    def get_relevance_filter_config(self) -> RelevanceFilterConfig:
+        """Get the pre-LLM relevance gate configuration."""
+        return RelevanceFilterConfig(
+            enabled=self._get_value("relevance_filter", "enabled", False, bool),
+            mode=self._get_value("relevance_filter", "mode", "shadow"),
+            model_path=self._get_value(
+                "relevance_filter", "model_path", "models/relevance/model.joblib"
+            ),
+            encoder=self._get_value("relevance_filter", "encoder", "tfidf_domain_v1"),
+            drop_threshold=self._get_value("relevance_filter", "drop_threshold", 0.05, float),
+            pass_threshold=self._get_value("relevance_filter", "pass_threshold", 0.5, float),
+            allowlist_terms=self._get_value(
+                "relevance_filter", "allowlist_terms",
+                ["fed", "ecb", "boj", "boe", "powell", "lagarde", "ueda"], list,
+            ),
+            min_training_samples=self._get_value(
+                "relevance_filter", "min_training_samples", 60, int
+            ),
+        )
 
     def get_google_cloud_config(self) -> Dict[str, Any]:
         """Get Google Cloud configuration"""

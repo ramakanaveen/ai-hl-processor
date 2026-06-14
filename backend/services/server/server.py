@@ -55,6 +55,78 @@ async def _broadcast_to_clients(message: dict):
 # Analyzer loop — replaces the old Kafka consumer loop
 # ---------------------------------------------------------------------------
 
+async def _process_message(
+    msg,
+    analyzer,
+    producer: AIOKafkaProducer,
+    output_topic: str,
+    relevance_filter=None,
+    relevance_mode: str = "off",
+) -> str:
+    """
+    Process a single raw-headline message: optionally gate it through the
+    relevance filter, then (unless dropped in enforce mode) run the LLM analysis
+    and publish/broadcast the result.
+
+    Returns an action label for observability/testing:
+        "empty" | "filtered_enforce" | "filtered_shadow" | "analyzed"
+    """
+    payload = msg.value
+    data = payload.get("data", payload)
+    headline_text = (data.get("text") or data.get("headline", "")).strip()
+    if not headline_text:
+        return "empty"
+    source = data.get("source") or "unknown"
+
+    action = "analyzed"
+    if relevance_filter is not None and relevance_filter.loaded:
+        # Scoring is CPU-bound — keep it off the event loop.
+        decision = await asyncio.to_thread(
+            relevance_filter.evaluate, headline_text, source
+        )
+        if decision.decision == "DROP":
+            enforced = relevance_mode == "enforce"
+            event = {
+                "type": "relevance_filtered",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "data": {
+                    "headline": headline_text,
+                    "source": source,
+                    "prob_relevant": round(decision.prob, 4),
+                    "decision": decision.decision,
+                    "reason": decision.reason,
+                    "mode": relevance_mode,
+                    "enforced": enforced,
+                    "top_features": decision.top_features[:5],
+                },
+            }
+            # Always emit (shadow AND enforce) so the gate is measurable/auditable.
+            await producer.send(output_topic, event)
+            await _broadcast_to_clients(event)
+            logger.info(
+                "relevance_filtered (%s) p=%.3f reason=%s :: %s",
+                relevance_mode, decision.prob, decision.reason, headline_text[:80],
+            )
+            if enforced:
+                return "filtered_enforce"
+            # Shadow mode: fall through and still analyze, for measurement.
+            action = "filtered_shadow"
+
+    result = await analyzer.analyze_headline(headline_text)
+    kafka_msg = {
+        "type": "analysis_result",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "data": result.model_dump(),
+    }
+    await producer.send(output_topic, kafka_msg)
+    await _broadcast_to_clients({
+        "type": "analysis_result",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "data": result.model_dump(),
+    })
+    return action
+
+
 async def _analyzer_loop(
     bootstrap_servers: str,
     input_topic: str,
@@ -62,6 +134,8 @@ async def _analyzer_loop(
     consumer_group: str,
     analyzer,
     producer: AIOKafkaProducer,
+    relevance_filter=None,
+    relevance_mode: str = "off",
 ):
     """
     Consume raw-headlines, analyse each one, publish the result to the
@@ -76,33 +150,16 @@ async def _analyzer_loop(
     )
     await consumer.start()
     logger.info(
-        f"Analyzer loop started — input={input_topic}, output={output_topic}"
+        f"Analyzer loop started — input={input_topic}, output={output_topic}, "
+        f"relevance={relevance_mode}"
     )
 
     try:
         async for msg in consumer:
-            payload = msg.value
-            data = payload.get("data", payload)
-            headline_text = (
-                data.get("text") or data.get("headline", "")
-            ).strip()
-            if not headline_text:
-                continue
-
-            result = await analyzer.analyze_headline(headline_text)
-
-            kafka_msg = {
-                "type": "analysis_result",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "data": result.model_dump(),
-            }
-            await producer.send(output_topic, kafka_msg)
-
-            await _broadcast_to_clients({
-                "type": "analysis_result",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "data": result.model_dump(),
-            })
+            await _process_message(
+                msg, analyzer, producer, output_topic,
+                relevance_filter, relevance_mode,
+            )
 
     finally:
         await consumer.stop()
@@ -134,6 +191,8 @@ def create_app(
     redis_store=None,
     file_store=None,
     environment: str = "dev",
+    relevance_filter=None,
+    relevance_mode: str = "off",
 ) -> FastAPI:
 
     @asynccontextmanager
@@ -154,6 +213,7 @@ def create_app(
             _analyzer_loop(
                 bootstrap_servers, input_topic, output_topic,
                 consumer_group, analyzer, producer,
+                relevance_filter, relevance_mode,
             )
         )
         yield
